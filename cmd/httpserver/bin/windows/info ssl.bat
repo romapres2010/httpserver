@@ -1,0 +1,1 @@
+.\restibmmq.exe -httpcfg test_config.cfg -ibmcfg test_ibm_config_local.cfg -l 127.0.0.1:3000 -ibmu roman -ibmpwd Welcome1 -httpu roman -httppwd Welcome1 -jwtk qwerlkc8SFlwe -d INFO -log test%s.log -ssl true

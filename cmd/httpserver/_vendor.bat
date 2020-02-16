@@ -1,0 +1,3 @@
+go get -u ./../...
+go mod vendor
+rem make -f make vendor

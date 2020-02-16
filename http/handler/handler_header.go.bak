@@ -1,0 +1,21 @@
+package handler
+
+// Обертка над стандартным пакетом http используется для изоляции HTTP кода и обработчиков
+
+import (
+	"net/http"
+)
+
+// Header represent temporary HTTP header for save
+// =====================================================================
+type Header map[string]string
+
+// _writeResponseHeader write HTTP header for response
+// =====================================================================
+func _writeResponseHeader(header Header, w http.ResponseWriter) {
+	if header != nil {
+		for key, h := range header {
+			w.Header().Set(key, h)
+		}
+	}
+}

@@ -1,0 +1,49 @@
+package handler
+
+import (
+	"fmt"
+	"net/http"
+
+	myerror "github.com/romapres2010/httpserver/error"
+	mylog "github.com/romapres2010/httpserver/log"
+)
+
+// LogError - log error into header, body and log
+// =====================================================================
+func (h *Handler) LogError(cnt string, err error, w http.ResponseWriter, status int, reqID uint64) {
+	// записываем в лог кроме статусов StatusNotFound
+	if status != http.StatusNotFound {
+
+		// полная ошибка со стеком вызова
+		errM := fmt.Sprintf("RequestID '%v', err %+v", reqID, err)
+
+		mylog.PrintfErrorStd(cnt, errM, nil)
+
+		// дополнительно записываем в заголовок ответа
+		if w != nil {
+			// если тип ошибки myerror.Error, то возьмем коды из нее
+			if myerr, ok := err.(*myerror.Error); ok {
+				w.Header().Set("Errcode", myerr.Code)
+				w.Header().Set("Errmes", myerr.Msg)
+				w.Header().Set("Causeerrcode", fmt.Sprintf("%v", myerr.CauseCode))
+				w.Header().Set("Causeerrmes", fmt.Sprintf("%v", myerr.CauseMes))
+			} else {
+				w.Header().Set("Errcode", "")
+				w.Header().Set("Errmes", err.Error())
+			}
+			w.Header().Set("Errtrace", errM)
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.Header().Set("RequestID", fmt.Sprintf("%v", reqID))
+			w.WriteHeader(status)
+
+			fmt.Fprintln(w, errM)
+		}
+	} else { // http.StatusNotFound
+		// дополнительно записываем в заголовок ответа
+		if w != nil {
+			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+			w.Header().Set("RequestID", fmt.Sprintf("%v", reqID))
+			w.WriteHeader(status)
+		}
+	}
+}
