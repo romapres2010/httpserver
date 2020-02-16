@@ -25,14 +25,13 @@ type Daemon struct {
 }
 
 // New create new Daemon
-// =====================================================================
 func New(HTTPConfigFile string,
 	listenSpec string,
 	HTTPUserID string,
 	HTTPUserPwd string,
 	JwtKey []byte) (*Daemon, error) {
 
-	mylog.PrintfInfoStd("START")
+	mylog.PrintfInfoStd("Starting to create new daemon")
 
 	var err error
 	var config *mini.Config
@@ -47,14 +46,14 @@ func New(HTTPConfigFile string,
 	daemon.Ctx, daemon.Cancel = context.WithCancel(context.Background())
 
 	// Загружаем конфигурационный файл
-	if config, err = _loadConfigFile(daemon.HTTPConfigFile); err != nil {
+	if config, err = loadConfigFile(daemon.HTTPConfigFile); err != nil {
 		return nil, err
 	}
 
 	{ // HTTP server
 		// конфигурационные параметры HTTPLogger
 		HTTPLoggerCfg := &httplog.Config{}
-		if err = _loadHTTPLoggerConfig(config, HTTPLoggerCfg); err != nil {
+		if err = loadHTTPLoggerConfig(config, HTTPLoggerCfg); err != nil {
 			return nil, err
 		}
 
@@ -63,7 +62,7 @@ func New(HTTPConfigFile string,
 			ListenSpec: listenSpec, // адрес листинера передается не через конфиг файл, а через строку запуска
 		}
 		// считываем конфигурацию HTTP servera
-		if err = _loadHTTPServerConfig(config, HTTPServerCfg); err != nil {
+		if err = loadHTTPServerConfig(config, HTTPServerCfg); err != nil {
 			return nil, err
 		}
 
@@ -80,7 +79,7 @@ func New(HTTPConfigFile string,
 		}
 
 		// считываем конфигурацию HTTP handler
-		if err := _loadHTTPHandlerConfig(config, HTTPHandlerCfg); err != nil {
+		if err = loadHTTPHandlerConfig(config, HTTPHandlerCfg); err != nil {
 			return nil, err
 		}
 
@@ -96,6 +95,7 @@ func New(HTTPConfigFile string,
 		daemon.Server, err = myhttp.NewServer(daemon.Ctx, HTTPHandlerCfg, HTTPServerCfg, HTTPLoggerCfg)
 	} // HTTP server
 
+	mylog.PrintfInfoStd("New daemon is created")
 	return daemon, nil
 }
 
@@ -104,7 +104,6 @@ func New(HTTPConfigFile string,
 func (d *Daemon) Run() error {
 	mylog.PrintfInfoStd("Starting")
 
-	//var err error
 	errCh := make(chan error, 1)        // канал ошибок
 	syscalCh := make(chan os.Signal, 1) // канал системных прирываний
 

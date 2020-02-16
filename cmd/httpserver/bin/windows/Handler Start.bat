@@ -1,2 +1,0 @@
-curl -X POST http://192.168.59.218:3000/ibmmq/queue/handler -H "Content-Type: application/xml" -H "Content-Type-Response: application/xml" -H "QueueCallbackMethod: POST" -H "QueueCallbackReCallRepeat: 1000" -H "QueueCallbackReCallWaitTimeout: 60" -H "QueueCallbackTimeout: 600"  -H "QueueCallbackURL: http://192.168.59.218:3000/echo" -H "QueueCallbackUserID: admin" -H "QueueCallbackUserPwd: admin" -H "QueueErrorLimit: 1000" -H "QueueName: Q_ROMAN" -H "QueueWaitInterval: 60" -H "QueueOptions: MQOO_BROWSE | MQOO_INPUT_AS_Q_DEF | MQOO_OUTPUT"
-pause

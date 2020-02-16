@@ -52,7 +52,7 @@ func NewServer(ctx context.Context,
 	serverCfg *Config,
 	httpLoggerCfg *httplog.Config) (*Server, error) {
 
-	mylog.PrintfInfoStd("START")
+	mylog.PrintfInfoStd("Starting to create new HTTP server")
 
 	var err error
 	var server *Server
@@ -163,6 +163,7 @@ func NewServer(ctx context.Context,
 		*/
 	}
 
+	mylog.PrintfInfoStd("New HTTP server is created")
 	return server, nil
 }
 

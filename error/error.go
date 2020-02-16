@@ -10,7 +10,6 @@ import (
 
 // Error represent custom error
 type Error struct {
-	//err       errors.Error // ошибка
 	Code      string // код ошибки
 	Msg       string // сформатированное сообщение об ошибке
 	File      string // файл где произошла ошибка

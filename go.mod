@@ -9,7 +9,6 @@ require (
 	github.com/go-logfmt/logfmt v0.5.0 // indirect
 	github.com/gorilla/mux v1.7.4
 	github.com/hashicorp/logutils v1.0.0
-	github.com/ibm-messaging/mq-golang v3.0.0+incompatible // indirect
 	github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515 // indirect
 	github.com/sasbury/mini v0.0.0-20181226232755-dc74af49394b
 	github.com/urfave/cli v1.22.2

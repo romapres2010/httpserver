@@ -1,0 +1,2 @@
+2020/02/16 21:45:50 [INFO] - main.go:[144] - main.func1() - HTTP Server is starting up. Version '0.0.5, commit '2c2ca15', build time '2020-02-16_18:43:43''. Log file '.\log\httpserver_2020_02_16_214550.log'
+2020/02/16 21:45:50 [INFO] - main.go:[148] - main.func1() - Set log level, arg[0]='DEBUG1'

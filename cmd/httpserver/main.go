@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"time"
@@ -26,9 +27,9 @@ var httpConfigFileFlag string
 var logFileFlag string
 var listenStringFlag string
 var debugFlag string
-var HTTPUserIDFlag string
-var HTTPUserPwdFlag string
-var JwtKeyFlag string // JWT secret key
+var httpUserIDFlag string
+var httpUserPwdFlag string
+var jwtKeyFlag string
 
 // входные флаги программы
 var flags = []cli.Flag{
@@ -48,20 +49,20 @@ var flags = []cli.Flag{
 	cli.StringFlag{
 		Name:        "httpuser, httpu",
 		Usage:       "User name for access to HTTP server",
-		Required:    false,
-		Destination: &HTTPUserIDFlag,
+		Required:    true,
+		Destination: &httpUserIDFlag,
 	},
 	cli.StringFlag{
 		Name:        "httppassword, httppwd",
 		Usage:       "User password for access to HTTP server",
-		Required:    false,
-		Destination: &HTTPUserPwdFlag,
+		Required:    true,
+		Destination: &httpUserPwdFlag,
 	},
 	cli.StringFlag{
 		Name:        "jwtkey, jwtk",
 		Usage:       "JSON web token secret key",
 		Required:    false,
-		Destination: &JwtKeyFlag,
+		Destination: &jwtKeyFlag,
 	},
 	cli.StringFlag{
 		Name:        "debug, d",
@@ -73,52 +74,20 @@ var flags = []cli.Flag{
 	cli.StringFlag{
 		Name:        "logfile, log",
 		Usage:       "Log file name",
-		Required:    false,
+		Required:    true,
 		Destination: &logFileFlag,
-		Value:       "ibmmq_%s.log", // %s время старта программы
+		Value:       "httpserver_%s.log", // %s время старта программы
 	},
 }
 
-// checkFlags - check flags and arguments
-func checkFlags() error {
-	mylog.PrintfInfoStd("Starting")
-
-	{ // входные проверки
-		if httpConfigFileFlag == "" {
-			errM := fmt.Sprintf("HTTP Config file name is null")
-			mylog.PrintfErrorStd(errM)
-			return myerror.New("6013", errM, "", "")
-		}
-		if listenStringFlag == "" {
-			errM := fmt.Sprintf("HTTP listener string is null")
-			mylog.PrintfErrorStd(errM)
-			return myerror.New("6014", errM, "", "")
-		}
-	} // входные проверки
-
-	// Установим фильтр логирования
-	if debugFlag != "" {
-		switch debugFlag {
-		case "DEBUG", "WARN", "ERROR", "INFO":
-			mylog.NewFilter(debugFlag)
-		default:
-			return myerror.New("9001", fmt.Sprintf("Incorrect debugFlag '%s'. Only avaliable: DEBUG, WARN, INFO, ERROR.", debugFlag), "", "")
-		}
-	}
-
-	mylog.PrintfInfoStd("SUCCESS")
-	return nil
-}
-
 //main - represent main function
-// =====================================================================
 func main() {
-	app := cli.NewApp() // создаем приложение
+	// Create new Application
+	app := cli.NewApp()
 	app.Name = "HTTP Server"
 	app.Version = fmt.Sprintf("%s, commit '%s', build time '%s'", version, commit, buildTime)
-	app.Author = "Presnyakov Roman"
+	app.Author = "Roman Presnyakov"
 	app.Email = "romapres@mail.ru"
-	app.Usage = "represent HTTP Server"
 	app.Flags = flags // присваиваем ранее определенные флаги
 	app.Writer = os.Stderr
 	app.Compiled = time.Now()
@@ -126,7 +95,7 @@ func main() {
 	// Определяем единственное действие - запуск демона
 	app.Action = func(c *cli.Context) error {
 
-		// настраиваем логирование в файл
+		// настраиваем параллельное логирование в файл
 		if logFileFlag != "" {
 			// добавляем в имя лог файла дату и время
 			if strings.Contains(logFileFlag, "%s") {
@@ -137,7 +106,7 @@ func main() {
 			if err != nil {
 				myerr := myerror.WithCause("6020", "Error open log file", "os.OpenFile", fmt.Sprintf("logFileFlag='%s'", logFileFlag), "", err.Error())
 				mylog.PrintfErrorStd(fmt.Sprintf("%+v", myerr))
-				os.Exit(1)
+				return myerr
 			}
 			// закрываем по выходу из демона
 			if f != nil {
@@ -153,50 +122,43 @@ func main() {
 			mylog.InitLogger(os.Stderr)
 		}
 
-		mylog.PrintfInfoStd(fmt.Sprintf("HTTP Server Starting Up. Version '%s'. Log file '%s'", app.Version, logFileFlag))
+		mylog.PrintfInfoStd(fmt.Sprintf("HTTP Server is starting up. Version '%s'. Log file '%s'", app.Version, logFileFlag))
 
-		// проверяем флаги
-		err := checkFlags()
-		if err != nil {
-			mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))
-			return err
-		}
-
-		// сформируем byte ключ из строки
-		var JwtKey []byte
-		if JwtKeyFlag == "" {
-			JwtKey = nil
-		} else {
-			JwtKey = []byte(JwtKeyFlag)
+		// Установим фильтр логирования
+		if debugFlag != "" {
+			mylog.PrintfInfoStd("Set log level", debugFlag)
+			switch debugFlag {
+			case "DEBUG", "WARN", "ERROR", "INFO":
+				mylog.NewFilter(debugFlag)
+			default:
+				myerr := myerror.New("9001", fmt.Sprintf("Incorrect debugFlag '%s'. Only avaliable: DEBUG, WARN, INFO, ERROR.", debugFlag), "", "")
+				mylog.PrintfErrorStd(fmt.Sprintf("%+v", myerr))
+				return myerr
+			}
 		}
 
 		// Инициализируем демон
-		dmn, err := daemon.New(
-			httpConfigFileFlag,
-			listenStringFlag,
-			HTTPUserIDFlag,
-			HTTPUserPwdFlag,
-			JwtKey)
+		daemon, err := daemon.New(httpConfigFileFlag, listenStringFlag, httpUserIDFlag, httpUserPwdFlag, []byte(jwtKeyFlag))
 		if err != nil {
 			mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))
 			return err
 		}
 
-		// Стартуем демон
-		err = dmn.Run()
+		// Стартуем демон и ожидаем завершения
+		err = daemon.Run()
 		if err != nil {
 			mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))
 			return err
 		}
 
-		mylog.PrintfInfoStd("HTTP Server is Shutdown")
+		mylog.PrintfInfoStd("HTTP Server is shutdown")
 		return nil
 	}
 
 	// Запускаем приложение
 	err := app.Run(os.Args)
 	if err != nil {
-		mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))
+		log.Printf("%+v", err)
 		os.Exit(1)
 	}
 

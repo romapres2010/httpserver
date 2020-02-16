@@ -1,0 +1,15 @@
+2020/02/16 21:56:26 [INFO] - main.go:[125] - main.func1() - HTTP Server is starting up. Version '0.0.5, commit '2c2ca15', build time '2020-02-16_18:56:17''. Log file '.\log\httpserver_2020_02_16_215625.log'
+2020/02/16 21:56:26 [INFO] - main.go:[129] - main.func1() - Set log level, arg[0]='DEBUG1'
+2020/02/16 21:56:26 [ERROR] - main.go:[135] - main.func1() - [ERROR] code=[9001], caller='main.go:134', method='', args='', mes='Incorrect debugFlag 'DEBUG1'. Only avaliable: DEBUG, WARN, INFO, ERROR.', causecode='', causemes=''
+main.main.func1
+	C:/Roman/YandexDisk/golang/src/github.com/romapres2010/httpserver/cmd/httpserver/main.go:134
+github.com/urfave/cli.HandleAction
+	C:/Roman/YandexDisk/golang/src/github.com/romapres2010/httpserver/vendor/github.com/urfave/cli/app.go:523
+github.com/urfave/cli.(*App).Run
+	C:/Roman/YandexDisk/golang/src/github.com/romapres2010/httpserver/vendor/github.com/urfave/cli/app.go:285
+main.main
+	C:/Roman/YandexDisk/golang/src/github.com/romapres2010/httpserver/cmd/httpserver/main.go:159
+runtime.main
+	c:/go/src/runtime/proc.go:203
+runtime.goexit
+	c:/go/src/runtime/asm_amd64.s:1357
