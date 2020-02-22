@@ -182,15 +182,3 @@ func (c *ClientCall) Process(ctx context.Context, cnt string, header Header, bod
 		}
 	}
 }
-
-/*
-// _writeRequestHeader write HTTP header for request
-// =====================================================================
-func _writeRequestHeader(header Header, req *http.Request) {
-	if header != nil {
-		for key, h := range header {
-			req.Header.Add(key, h)
-		}
-	}
-}
-*/
