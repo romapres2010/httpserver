@@ -15,21 +15,23 @@ import (
 	mylog "github.com/romapres2010/httpserver/log"
 )
 
-// параметры подменяемые компилятором при сборке бинарника
+// Параметры, подменяемые компилятором при сборке бинарника
 var (
 	version   = "0.0.5"
 	commit    = "unset"
 	buildTime = "unset"
 )
 
-// Глобальные переменные в которые парсятся входные флаги
-var httpConfigFileFlag string
-var logFileFlag string
-var listenStringFlag string
-var debugFlag string
-var httpUserIDFlag string
-var httpUserPwdFlag string
-var jwtKeyFlag string
+// Глобальные переменные, в которые парсятся входные флаги
+var (
+	httpConfigFileFlag string
+	logFileFlag        string
+	listenStringFlag   string
+	debugFlag          string
+	httpUserIDFlag     string
+	httpUserPwdFlag    string
+	jwtKeyFlag         string
+)
 
 // входные флаги программы
 var flags = []cli.Flag{
@@ -86,7 +88,7 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "HTTP Server"
 	app.Version = fmt.Sprintf("%s, commit '%s', build time '%s'", version, commit, buildTime)
-	app.Author = "Roman Presnyakov"
+	app.Author = "Roman"
 	app.Email = "romapres@mail.ru"
 	app.Flags = flags // присваиваем ранее определенные флаги
 	app.Writer = os.Stderr
