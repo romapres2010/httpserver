@@ -39,19 +39,9 @@ func PrintfInfoStd(mes string, args ...interface{}) {
 	printfStd("INFO", 0, mes, args...)
 }
 
-//PrintfInfoStd1 print message in Info level - standard mode
-func PrintfInfoStd1(mes string, args ...interface{}) {
-	printfStd("INFO", 1, mes, args...)
-}
-
 //PrintfDebugStd print message in Debug level - standard mode
 func PrintfDebugStd(mes string, args ...interface{}) {
 	printfStd("DEBUG", 0, mes, args...)
-}
-
-//PrintfDebugStd1 print message in Debug level - standard mode
-func PrintfDebugStd1(mes string, args ...interface{}) {
-	printfStd("DEBUG", 1, mes, args...)
 }
 
 //PrintfErrorStd print message in Error level - standard mode
@@ -62,11 +52,6 @@ func PrintfErrorStd(mes string, args ...interface{}) {
 //PrintfErrorStd1 print message in Error level - standard mode
 func PrintfErrorStd1(mes string, args ...interface{}) {
 	printfStd("ERROR", 1, mes, args...)
-}
-
-//PrintfErrorStd2 print message in Error level - standard mode
-func PrintfErrorStd2(mes string, args ...interface{}) {
-	printfStd("ERROR", 2, mes, args...)
 }
 
 //PrintfWarnStd print message in Warn level - standard mode

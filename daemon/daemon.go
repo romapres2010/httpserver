@@ -17,7 +17,7 @@ import (
 // Daemon repesent top level daemon
 type Daemon struct {
 	ctx            context.Context    // корневой контекст при инициации сервиса
-	cancel         context.CancelFunc // функция закрытия глобального контекста
+	cancel         context.CancelFunc // функция закрытия корневого контекста
 	configFileName string             // основной файл конфигурации
 
 	// Сервисы демона
@@ -31,7 +31,7 @@ type Daemon struct {
 }
 
 // New create new Daemon
-func New(configFileName string, listenSpec string, httpUserID string, httpUserPwd string, jwtKey []byte) (*Daemon, error) {
+func New(ctx context.Context, configFileName string, listenSpec string, httpUserID string, httpUserPwd string, jwtKey []byte) (*Daemon, error) {
 	var err error
 	var config *mini.Config
 
@@ -42,8 +42,12 @@ func New(configFileName string, listenSpec string, httpUserID string, httpUserPw
 		configFileName: configFileName,
 	}
 
-	// создаем новый контекст с отменой, используется при остановке сервера, всех сервисов и текущих запросов
-	daemon.ctx, daemon.cancel = context.WithCancel(context.Background())
+	// создаем контекст с отменой
+	if ctx == nil {
+		daemon.ctx, daemon.cancel = context.WithCancel(context.Background())
+	} else {
+		daemon.ctx, daemon.cancel = context.WithCancel(ctx)
+	}
 
 	// Загружаем конфигурационный файл
 	if config, err = loadConfigFile(daemon.configFileName); err != nil {
@@ -102,7 +106,7 @@ func New(configFileName string, listenSpec string, httpUserID string, httpUserPw
 func (d *Daemon) Run() error {
 	mylog.PrintfInfoStd("Starting")
 
-	errCh := make(chan error, 1)        // канал ошибок
+	errCh := make(chan error, 1)        // канал ошибок 
 	syscalCh := make(chan os.Signal, 1) // канал системных прирываний
 
 	// запускаем в фоне HTTP сервер, возврат в канал ошибок

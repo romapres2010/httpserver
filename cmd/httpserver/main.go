@@ -94,7 +94,7 @@ func main() {
 	app.Writer = os.Stderr
 
 	// Определяем единственное действие - запуск демона
-	app.Action = func(c *cli.Context) error {
+	app.Action = func(ctx *cli.Context) error {
 
 		// настраиваем параллельное логирование в файл
 		if logFileFlag != "" {
@@ -139,7 +139,7 @@ func main() {
 		}
 
 		// Создаем новый демон
-		daemon, err := daemon.New(httpConfigFileFlag, listenStringFlag, httpUserIDFlag, httpUserPwdFlag, []byte(jwtKeyFlag))
+		daemon, err := daemon.New(nil, httpConfigFileFlag, listenStringFlag, httpUserIDFlag, httpUserPwdFlag, []byte(jwtKeyFlag))
 		if err != nil {
 			mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))
 			return err

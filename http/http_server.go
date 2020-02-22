@@ -19,8 +19,8 @@ import (
 
 // Server repesent HTTP server
 type Server struct {
-	сtx    context.Context    // корневой контекст при инициации сервиса
-	сancel context.CancelFunc // функция закрытия глобального контекста
+	ctx    context.Context    // корневой контекст при инициации сервиса
+	cancel context.CancelFunc // функция закрытия глобального контекста
 	cfg    *Config            // конфигурация HTTP сервера
 
 	listener net.Listener     // листинер HTTP сервера
@@ -67,9 +67,9 @@ func NewServer(ctx context.Context, cfg *Config) (*Server, error) {
 
 		// создаем контекст с отменой
 		if ctx == nil {
-			server.сtx, server.сancel = context.WithCancel(context.Background())
+			server.ctx, server.cancel = context.WithCancel(context.Background())
 		} else {
-			server.сtx, server.сancel = context.WithCancel(ctx)
+			server.ctx, server.cancel = context.WithCancel(ctx)
 		}
 
 		// Если задано ограничение на header
@@ -78,7 +78,7 @@ func NewServer(ctx context.Context, cfg *Config) (*Server, error) {
 		}
 
 		// Новый HTTP обработчик
-		if server.handler, err = handler.NewHandler(server.сtx, &cfg.HandlerCfg); err != nil {
+		if server.handler, err = handler.NewHandler(server.ctx, &cfg.HandlerCfg); err != nil {
 			return nil, err
 		}
 
@@ -175,7 +175,7 @@ func (s *Server) Shutdown() error {
 
 	// закрываем корневой контекст с ожидаением на закрытие простаивающих подключений
 	mylog.PrintfInfoStd("Waiting for shutdown of HTTP Server 30 sec")
-	cancelCtx, cancel := context.WithTimeout(s.сtx, 30*time.Second)
+	cancelCtx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
 
 	err := s.server.Shutdown(cancelCtx)
