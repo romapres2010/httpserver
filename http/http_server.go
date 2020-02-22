@@ -14,22 +14,22 @@ import (
 	"github.com/gorilla/mux"
 	myerror "github.com/romapres2010/httpserver/error"
 	handler "github.com/romapres2010/httpserver/http/handler"
-	httplog "github.com/romapres2010/httpserver/http/httplog"
 	mylog "github.com/romapres2010/httpserver/log"
 )
 
 // Server repesent HTTP server
 type Server struct {
-	Ctx      context.Context    // корневой контекст при инициации сервиса
-	Cancel   context.CancelFunc // функция закрытия глобального контекста
-	listener net.Listener       // листенер HTTP сервера
-	router   *mux.Router        // роутер HTTP сервера
-	server   *http.Server       // HTTP сервер
-	cfg      *Config            // конфигурация HTTP сервера
-	handler  *handler.Handler   // обработчик HTTP запросов
+	сtx    context.Context    // корневой контекст при инициации сервиса
+	сancel context.CancelFunc // функция закрытия глобального контекста
+	cfg    *Config            // конфигурация HTTP сервера
+
+	listener net.Listener     // листинер HTTP сервера
+	router   *mux.Router      // роутер HTTP сервера
+	server   *http.Server     // HTTP сервер
+	handler  *handler.Handler // обработчик HTTP запросов
 }
 
-// ServerConfig repesent HTTP server options
+// Config repesent HTTP server options
 type Config struct {
 	ListenSpec     string // строка HTTP листенера
 	ReadTimeout    int    // HTTP read timeout duration in sec - default 60 sec
@@ -43,78 +43,68 @@ type Config struct {
 	TLSKeyFile     string // TLS Private key file name
 	TLSMinVersion  uint16 // TLS min version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
 	TLSMaxVersion  uint16 // TLS max version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
+
+	// конфигурация вложенных сервисов
+	HandlerCfg handler.Config // конфигурация HTTP обработчика
 }
 
 // NewServer - create new HTTP server
-// =====================================================================
-func NewServer(ctx context.Context,
-	handlerCfg *handler.Config,
-	serverCfg *Config,
-	httpLoggerCfg *httplog.Config) (*Server, error) {
+func NewServer(ctx context.Context, cfg *Config) (*Server, error) {
+	var err error
+	var server *Server
 
 	mylog.PrintfInfoStd("Starting to create new HTTP server")
 
-	var err error
-	var server *Server
-	var HTTPHandler *handler.Handler
-	var Ctx context.Context
-	var Cancel context.CancelFunc
-
-	// создаем контекст с отменой
-	// cancel используется при остановке сервера для остановки всех обработчиков и текущих запросов
-	if ctx == nil {
-		Ctx, Cancel = context.WithCancel(context.Background())
-	} else {
-		Ctx, Cancel = context.WithCancel(ctx)
-	}
-
-	// Конфигурация HTTP обработчика
-	HTTPHandler = &handler.Handler{
-		Ctx:    Ctx,
-		Cancel: Cancel,
-		Cfg:    handlerCfg,
-	}
-
-	// создаем обработчик для логирования HTTP
-	HTTPHandler.HTTPLogger = httplog.NewHTTPLogger(Ctx, httpLoggerCfg)
-
 	{ // Конфигурация HTTP сервера
 		server = &Server{
-			Ctx:     Ctx,
-			Cancel:  Cancel,
-			handler: HTTPHandler,
-			cfg:     serverCfg,
-			router:  mux.NewRouter(),
+			cfg: cfg,
 			server: &http.Server{
-				ReadTimeout:  time.Duration(serverCfg.ReadTimeout * int(time.Second)),
-				WriteTimeout: time.Duration(serverCfg.WriteTimeout * int(time.Second)),
-				IdleTimeout:  time.Duration(serverCfg.IdleTimeout * int(time.Second)),
+				ReadTimeout:  time.Duration(cfg.ReadTimeout * int(time.Second)),
+				WriteTimeout: time.Duration(cfg.WriteTimeout * int(time.Second)),
+				IdleTimeout:  time.Duration(cfg.IdleTimeout * int(time.Second)),
 			},
 		}
 
-		if serverCfg.MaxHeaderBytes > 0 {
-			server.server.MaxHeaderBytes = serverCfg.MaxHeaderBytes
+		// создаем контекст с отменой
+		if ctx == nil {
+			server.сtx, server.сancel = context.WithCancel(context.Background())
+		} else {
+			server.сtx, server.сancel = context.WithCancel(ctx)
 		}
+
+		// Если задано ограничение на header
+		if cfg.MaxHeaderBytes > 0 {
+			server.server.MaxHeaderBytes = cfg.MaxHeaderBytes
+		}
+
+		// Новый HTTP обработчик
+		if server.handler, err = handler.NewHandler(server.сtx, &cfg.HandlerCfg); err != nil {
+			return nil, err
+		}
+
 	} // Конфигурация HTTP сервера
 
 	{ // Определяем  листенер
-		server.listener, err = net.Listen("tcp", serverCfg.ListenSpec)
+		server.listener, err = net.Listen("tcp", cfg.ListenSpec)
 		if err != nil {
-			errM := fmt.Sprintf("Failed create new TCP listener network='tcp', address='%s'", serverCfg.ListenSpec)
+			errM := fmt.Sprintf("Failed create new TCP listener network='tcp', address='%s'", cfg.ListenSpec)
 			mylog.PrintfErrorStd(errM)
-			return nil, myerror.WithCause("5006", errM, "net.Listen()", fmt.Sprintf("network='tcp', address='%s'", serverCfg.ListenSpec), "", err.Error())
+			return nil, myerror.WithCause("5006", errM, "net.Listen()", fmt.Sprintf("network='tcp', address='%s'", cfg.ListenSpec), "", err.Error())
 		}
 
-		mylog.PrintfInfoStd(fmt.Sprintf("Create new TCP listener network='tcp', address='%s'", serverCfg.ListenSpec))
+		mylog.PrintfInfoStd(fmt.Sprintf("Create new TCP listener network='tcp', address='%s'", cfg.ListenSpec))
 	} // Определяем  листенер
 
 	{ // Настраиваем роутер
+		server.router = mux.NewRouter()
+
 		// страница эхо с входными параметрами и body
-		server.router.HandleFunc("/echo", server.handler.RecoverWrap(http.HandlerFunc(server.handler.EchoHandler))).Methods("GET")
+		server.router.HandleFunc("/echo", server.handler.RecoverWrap(server.handler.EchoHandler)).Methods("GET")
+		mylog.PrintfInfoStd("'/echo' GET handler is registered")
 
 		// страница авторизации и renew JWT
-		server.router.HandleFunc("/signin", server.handler.RecoverWrap(http.HandlerFunc(server.handler.SinginHandler))).Methods("POST")
-		server.router.HandleFunc("/refresh", server.handler.RecoverWrap(http.HandlerFunc(server.handler.JWTRefreshHandler))).Methods("POST")
+		server.router.HandleFunc("/signin", server.handler.RecoverWrap(server.handler.SinginHandler)).Methods("POST")
+		server.router.HandleFunc("/refresh", server.handler.RecoverWrap(server.handler.JWTRefreshHandler)).Methods("POST")
 
 		// Регистрация pprof-обработчиков
 		{
@@ -185,7 +175,7 @@ func (s *Server) Shutdown() error {
 
 	// закрываем корневой контекст с ожидаением на закрытие простаивающих подключений
 	mylog.PrintfInfoStd("Waiting for shutdown of HTTP Server 30 sec")
-	cancelCtx, cancel := context.WithTimeout(s.Ctx, 30*time.Second)
+	cancelCtx, cancel := context.WithTimeout(s.сtx, 30*time.Second)
 	defer cancel()
 
 	err := s.server.Shutdown(cancelCtx)
@@ -196,9 +186,7 @@ func (s *Server) Shutdown() error {
 	}
 
 	// Закрываем HTTPLogger для корректного закрытия лог файла
-	if s.handler.HTTPLogger != nil {
-		s.handler.HTTPLogger.Close()
-	}
+	s.handler.Shutdown()
 
 	return nil
 }

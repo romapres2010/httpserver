@@ -19,10 +19,10 @@ type Header map[string]string
 
 // Handler - представляет обертку над обработчиком для реализации всех HTTP методов
 type Handler struct {
-	Ctx        context.Context     // корневой контекст при инициации сервиса
-	Cancel     context.CancelFunc  // функция закрытия глобального контекста
-	Cfg        *Config             // Конфигурационные параметры
-	HTTPLogger *httplog.HTTPLogger // сервис логирования HTTP
+	сtx    context.Context    // корневой контекст при инициации сервиса
+	cancel context.CancelFunc // функция закрытия глобального контекста
+	cfg    *Config            // Конфигурационные параметры
+	logger *httplog.Logger    // сервис логирования HTTP
 }
 
 // Config repsent HTTP Handler configurations
@@ -40,34 +40,45 @@ type Config struct {
 	MSADPort     int    // MS Active Directory Port
 	MSADBaseDN   string // MS Active Directory BaseDN
 	MSADSecurity int    // MS Active Directory Security: SecurityNone, SecurityTLS, SecurityStartTLS
+
+	// конфигурация вложенных сервисов
+	LogCfg httplog.Config // конфигурация HTTP логирования
 }
 
-/*
 // NewHandler - создает новый handler
-// =====================================================================
-func NewHandler(ctx context.Context, queue *queue.Service, xml *xml.Service, eventLogger *EventLogger, cfg *HandlerConfig) *Handler {
+func NewHandler(ctx context.Context, cfg *Config) (*Handler, error) {
+	var err error
 
-	h := &Handler{
-		queue:       queue,
-		xml:         xml,
-		cfg:         cfg,
-		eventLogger: eventLogger,
+	handler := &Handler{
+		cfg: cfg,
 	}
 
 	// создаем контекст с отменой
-	// h.cancel используется при остановке сервера для остановки всех обработчиков и текущих запросов
 	if ctx == nil {
-		h.Ctx, h.Cancel = context.WithCancel(context.Background())
+		handler.сtx, handler.cancel = context.WithCancel(context.Background())
 	} else {
-		h.Ctx, h.Cancel = context.WithCancel(ctx)
+		handler.сtx, handler.cancel = context.WithCancel(ctx)
 	}
 
-	return h
+	// создаем обработчик для логирования HTTP
+	if handler.logger, err = httplog.NewLogger(handler.сtx, &cfg.LogCfg); err != nil {
+		return nil, err
+	}
+
+	return handler, nil
 }
-*/
+
+// Shutdown shutting down handler
+func (h *Handler) Shutdown() {
+	// Закрываем Logger для корректного закрытия лог файла
+	if h.logger != nil {
+		h.logger.Close()
+	}
+
+	defer h.cancel()
+}
 
 // RecoverWrap cover handler functions with panic recoverer
-// =====================================================================
 func (h *Handler) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 
@@ -93,14 +104,13 @@ func (h *Handler) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 }
 
 // Process - represent server common task in process incoming HTTP request
-// =====================================================================
 func (h *Handler) Process(method string, w http.ResponseWriter, r *http.Request, fn func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error)) {
 	var err error
 	var reqID uint64 // уникальный номер Request
 
 	// логируем входящий HTTP запрос, одновременно получаем ID Request
-	if h.HTTPLogger != nil {
-		reqID, _ = h.HTTPLogger.LogHTTPInRequest(h.Ctx, r)
+	if h.logger != nil {
+		reqID, _ = h.logger.LogHTTPInRequest(h.сtx, r)
 		mylog.PrintfDebugStd("Logging HTTP request", reqID)
 	}
 
@@ -113,8 +123,8 @@ func (h *Handler) Process(method string, w http.ResponseWriter, r *http.Request,
 	}
 
 	// Если включен режим аутентификации без использования JWT токена, то проверять пользователя и пароль каждый раз
-	mylog.PrintfDebugStd("Check authentication method", reqID, h.Cfg.AuthType)
-	if (h.Cfg.AuthType == "INTERNAL" || h.Cfg.AuthType == "MSAD") && !h.Cfg.UseJWT {
+	mylog.PrintfDebugStd("Check authentication method", reqID, h.cfg.AuthType)
+	if (h.cfg.AuthType == "INTERNAL" || h.cfg.AuthType == "MSAD") && !h.cfg.UseJWT {
 		mylog.PrintfDebugStd(fmt.Sprintf("JWT is of. Need Authentication, reqID '%v'", reqID))
 		if _, err = h._checkBasicAuthentication(r); err != nil {
 			h.LogError(err, w, http.StatusUnauthorized, reqID)
@@ -123,7 +133,7 @@ func (h *Handler) Process(method string, w http.ResponseWriter, r *http.Request,
 	}
 
 	// Если используем JWT - проверим токен
-	if h.Cfg.UseJWT {
+	if h.cfg.UseJWT {
 		mylog.PrintfDebugStd("JWT is on. Check JSON web token", reqID)
 		if _, err = h._checkJWTFromCookie(r); err != nil {
 			h.LogError(err, w, http.StatusUnauthorized, reqID)
@@ -150,7 +160,7 @@ func (h *Handler) Process(method string, w http.ResponseWriter, r *http.Request,
 	}
 
 	// use HSTS Strict-Transport-Security
-	if h.Cfg.UseHSTS {
+	if h.cfg.UseHSTS {
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	}
 
@@ -163,9 +173,9 @@ func (h *Handler) Process(method string, w http.ResponseWriter, r *http.Request,
 	header["Content-Type"] = responseContentType
 
 	// Логируем ответ в файл
-	if h.HTTPLogger != nil {
+	if h.logger != nil {
 		mylog.PrintfDebugStd("Logging HTTP response", reqID)
-		h.HTTPLogger.LogHTTPInResponse(h.Ctx, header, responseBuf, status, reqID)
+		h.logger.LogHTTPInResponse(h.сtx, header, responseBuf, status, reqID)
 	}
 
 	// запишем ответ в заголовок

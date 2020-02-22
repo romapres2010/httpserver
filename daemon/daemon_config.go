@@ -17,11 +17,9 @@ import (
 )
 
 // loadConfigFile load confiuration file
-// =====================================================================
 func loadConfigFile(fileName string) (*mini.Config, error) {
 	var err error
 
-	// считаем конфигурацию из внешнего файла
 	if fileName == "" {
 		errM := fmt.Sprintf("Config file name is null")
 		mylog.PrintfErrorStd(errM)
@@ -29,9 +27,8 @@ func loadConfigFile(fileName string) (*mini.Config, error) {
 	}
 	mylog.PrintfInfoStd(fmt.Sprintf("Loading HTTP Server config from file '%s'", fileName))
 
-	// Считать информацию о файле или каталоге
+	// Считать информацию о файле
 	_, err = os.Stat(fileName)
-	// Если файл не существует
 	if os.IsNotExist(err) {
 		errM := fmt.Sprintf("Config file '%s' does not exist", fileName)
 		mylog.PrintfErrorStd(errM)
@@ -50,7 +47,6 @@ func loadConfigFile(fileName string) (*mini.Config, error) {
 }
 
 // loadHTTPServerConfig load HTTP server confiuration from file
-// =====================================================================
 func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *myhttp.Config) error {
 	var err error
 
@@ -161,7 +157,6 @@ func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *myhttp.Config) err
 }
 
 // loadHTTPHandlerConfig load HTTP handler confiuration from file
-// =====================================================================
 func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *handler.Config) error {
 	var err error
 
@@ -246,8 +241,7 @@ func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *handler.Config) 
 	return nil
 }
 
-// _loadHTTPLoggerConfig load HTTP Logger confiuration from file
-// =====================================================================
+// loadHTTPLoggerConfig load HTTP Logger confiuration from file
 func loadHTTPLoggerConfig(config *mini.Config, cfg *httplog.Config) error {
 	var err error
 
@@ -308,8 +302,7 @@ func loadHTTPLoggerConfig(config *mini.Config, cfg *httplog.Config) error {
 	return nil
 }
 
-// _loadIntParameter load int paparameter and log err
-// =====================================================================
+// loadIntParameter load int paparameter and log err
 func loadIntParameter(pgcfg *mini.Config, name string, manadatory bool, defval string) (int, error) {
 	strVal := pgcfg.String(name, defval)
 	intVal, err := strconv.Atoi(strVal)
@@ -325,7 +318,6 @@ func loadIntParameter(pgcfg *mini.Config, name string, manadatory bool, defval s
 }
 
 // loadStrParameter load str paparameter and log err
-// =====================================================================
 func loadStrParameter(pgcfg *mini.Config, name string, manadatory bool, defval string) (string, error) {
 	strVal := pgcfg.String(name, defval)
 	if manadatory && defval == "" && strVal == "" {
@@ -339,7 +331,6 @@ func loadStrParameter(pgcfg *mini.Config, name string, manadatory bool, defval s
 }
 
 // loadIntFromSection load int paparameter and log err
-// =====================================================================
 func loadIntFromSection(sectionName string, pgcfg *mini.Config, name string, manadatory bool, defval string) (int, error) {
 	strVal := pgcfg.StringFromSection(sectionName, name, defval)
 	intVal, err := strconv.Atoi(strVal)
@@ -355,7 +346,6 @@ func loadIntFromSection(sectionName string, pgcfg *mini.Config, name string, man
 }
 
 // loadStringFromSection load str paparameter and log err
-// =====================================================================
 func loadStringFromSection(sectionName string, pgcfg *mini.Config, name string, manadatory bool, defval string) (string, error) {
 	strVal := pgcfg.StringFromSection(sectionName, name, defval)
 	if manadatory && defval == "" && strVal == "" {
@@ -369,7 +359,6 @@ func loadStringFromSection(sectionName string, pgcfg *mini.Config, name string, 
 }
 
 // loadBoolFromSection load bool paparameter and log err
-// =====================================================================
 func loadBoolFromSection(sectionName string, pgcfg *mini.Config, name string, manadatory bool, defval string) (bool, error) {
 	strVal := pgcfg.StringFromSection(sectionName, name, defval)
 	if manadatory && defval == "" && strVal == "" {

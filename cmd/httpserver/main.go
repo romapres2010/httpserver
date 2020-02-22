@@ -88,11 +88,10 @@ func main() {
 	app := cli.NewApp()
 	app.Name = "HTTP Server"
 	app.Version = fmt.Sprintf("%s, commit '%s', build time '%s'", version, commit, buildTime)
-	app.Author = "Roman"
+	app.Author = "Roman Presnyakov"
 	app.Email = "romapres@mail.ru"
 	app.Flags = flags // присваиваем ранее определенные флаги
 	app.Writer = os.Stderr
-	app.Compiled = time.Now()
 
 	// Определяем единственное действие - запуск демона
 	app.Action = func(c *cli.Context) error {
@@ -139,7 +138,7 @@ func main() {
 			}
 		}
 
-		// Инициализируем демон
+		// Создаем новый демон
 		daemon, err := daemon.New(httpConfigFileFlag, listenStringFlag, httpUserIDFlag, httpUserPwdFlag, []byte(jwtKeyFlag))
 		if err != nil {
 			mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))

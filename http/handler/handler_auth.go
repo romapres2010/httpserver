@@ -37,30 +37,30 @@ func (h *Handler) _checkBasicAuthentication(r *http.Request) (string, error) {
 	mylog.PrintfDebugStd(fmt.Sprintf("Get Authorization header, username='%s'", username))
 
 	// В режиме "INTERNAL" сравнимаем пользователя пароль с тем что был передан при старте адаптера
-	if h.Cfg.AuthType == "INTERNAL" {
-		if h.Cfg.HTTPUserID != username || h.Cfg.HTTPUserPwd != password {
+	if h.cfg.AuthType == "INTERNAL" {
+		if h.cfg.HTTPUserID != username || h.cfg.HTTPUserPwd != password {
 			myerr := myerror.New("8010", "Invalid user or password", cnt, fmt.Sprintf("username='%s'", username))
 			return "", myerr
 		}
 		mylog.PrintfInfoStd(fmt.Sprintf("Success Internal Authentication, username='%s'", username))
 
-	} else if h.Cfg.AuthType == "MSAD" {
+	} else if h.cfg.AuthType == "MSAD" {
 		config := &auth.Config{
-			Server:   h.Cfg.MSADServer,
-			Port:     h.Cfg.MSADPort,
-			BaseDN:   h.Cfg.MSADBaseDN,
-			Security: auth.SecurityType(h.Cfg.MSADSecurity),
+			Server:   h.cfg.MSADServer,
+			Port:     h.cfg.MSADPort,
+			BaseDN:   h.cfg.MSADBaseDN,
+			Security: auth.SecurityType(h.cfg.MSADSecurity),
 		}
 
 		status, err := auth.Authenticate(config, username, password)
 
 		if err != nil {
-			myerr := myerror.WithCause("8011", fmt.Sprintf("Error MS Active Directory Authentication"), "auth.Authenticate()", fmt.Sprintf("Server='%s:%v', BaseDN='%s', Security='%v', username='%s'", h.Cfg.MSADServer, h.Cfg.MSADPort, h.Cfg.MSADBaseDN, h.Cfg.MSADSecurity, username), "", err.Error())
+			myerr := myerror.WithCause("8011", fmt.Sprintf("Error MS Active Directory Authentication"), "auth.Authenticate()", fmt.Sprintf("Server='%s:%v', BaseDN='%s', Security='%v', username='%s'", h.cfg.MSADServer, h.cfg.MSADPort, h.cfg.MSADBaseDN, h.cfg.MSADSecurity, username), "", err.Error())
 			return "", myerr
 		}
 
 		if !status {
-			myerr := myerror.New("8010", "Invalid user or password", "auth.Authenticate()", fmt.Sprintf("Server='%s:%v', BaseDN='%s', Security='%v', username='%s'", h.Cfg.MSADServer, h.Cfg.MSADPort, h.Cfg.MSADBaseDN, h.Cfg.MSADSecurity, username))
+			myerr := myerror.New("8010", "Invalid user or password", "auth.Authenticate()", fmt.Sprintf("Server='%s:%v', BaseDN='%s', Security='%v', username='%s'", h.cfg.MSADServer, h.cfg.MSADPort, h.cfg.MSADBaseDN, h.cfg.MSADSecurity, username))
 			return "", myerr
 		}
 		mylog.PrintfInfoStd(fmt.Sprintf("Success MS Active Directory Authentication, username='%s'", username))
@@ -84,7 +84,7 @@ func (h *Handler) _checkJWTFromCookie(r *http.Request) (*Claims, error) {
 		return nil, myerr
 	}
 
-	return _checkJWT(c.Value, h.Cfg.JwtKey)
+	return _checkJWT(c.Value, h.cfg.JwtKey)
 }
 
 // _checkJWT check JWT
@@ -127,15 +127,15 @@ func (h *Handler) _createJWTSetCookie(claims *Claims, w http.ResponseWriter) (*h
 	var expirationTime *time.Time
 
 	// в настройках JWTExpiresAt больше 0 установим expiry time
-	if h.Cfg.JWTExpiresAt > 0 {
-		t := time.Now().Add(time.Duration(h.Cfg.JWTExpiresAt * int(time.Second)))
+	if h.cfg.JWTExpiresAt > 0 {
+		t := time.Now().Add(time.Duration(h.cfg.JWTExpiresAt * int(time.Second)))
 		expirationTime = &t
 	} else {
 		expirationTime = nil
 	}
 
 	// создадим новый токен
-	if tokenString, err = _createJWT(claims, expirationTime, h.Cfg.JwtKey); err != nil {
+	if tokenString, err = _createJWT(claims, expirationTime, h.cfg.JwtKey); err != nil {
 		return nil, err
 	}
 
@@ -146,7 +146,7 @@ func (h *Handler) _createJWTSetCookie(claims *Claims, w http.ResponseWriter) (*h
 	}
 
 	// в настройках JWTExpiresAt больше 0
-	if h.Cfg.JWTExpiresAt > 0 {
+	if h.cfg.JWTExpiresAt > 0 {
 		// Finally, we set the client cookie for "token" as the JWT we just generated
 		// we also set an expiry time which is the same as the token itself
 		cookie.Expires = *expirationTime
@@ -193,10 +193,10 @@ func (h *Handler) SinginHandler(w http.ResponseWriter, r *http.Request) {
 	var cookie *http.Cookie
 
 	// запросим ID следующего Request
-	reqID := h.HTTPLogger.GetNextReqID()
+	reqID := h.logger.GetNextReqID()
 
 	// Если включен режим аутентификации
-	if h.Cfg.AuthType == "INTERNAL" || h.Cfg.AuthType == "MSAD" {
+	if h.cfg.AuthType == "INTERNAL" || h.cfg.AuthType == "MSAD" {
 		if username, err = h._checkBasicAuthentication(r); err != nil {
 			h.LogError(err, w, http.StatusUnauthorized, reqID)
 			return
@@ -205,7 +205,7 @@ func (h *Handler) SinginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Если включен режим JSON web token (JWT)
 	// Технически можно выдать JWT без аутентификации - для контроля сесии, по практический смысл ограничен
-	if h.Cfg.UseJWT {
+	if h.cfg.UseJWT {
 
 		// Create the JWT claims, which includes the username
 		claims := &Claims{
@@ -240,11 +240,11 @@ func (h *Handler) JWTRefreshHandler(w http.ResponseWriter, r *http.Request) {
 	var cookie *http.Cookie
 
 	// запросим ID следующего Request
-	reqID := h.HTTPLogger.GetNextReqID()
+	reqID := h.logger.GetNextReqID()
 
 	// Если включен режим JSON web token (JWT)
-	// Если h.Cfg.JWTExpiresAt = 0, то токен вечный - незачем обновлять
-	if h.Cfg.UseJWT && h.Cfg.JWTExpiresAt > 0 {
+	// Если h.cfg.JWTExpiresAt = 0, то токен вечный - незачем обновлять
+	if h.cfg.UseJWT && h.cfg.JWTExpiresAt > 0 {
 		// проверим текущий JWT
 		mylog.PrintfDebugStd(fmt.Sprintf("JWT is on. Check JSON web token"))
 		if claims, err = h._checkJWTFromCookie(r); err != nil {
@@ -262,7 +262,7 @@ func (h *Handler) JWTRefreshHandler(w http.ResponseWriter, r *http.Request) {
 		mylog.PrintfDebugStd(fmt.Sprintf("Set HTTP Cookie '%+v'", cookie))
 
 	} else {
-		mylog.PrintfDebugStd(fmt.Sprintf("!(h.Cfg.UseJWT && h.Cfg.JWTExpiresAt > 0). Nothing to do, useJWT='%t', JWTExpiresAt='%v'", h.Cfg.UseJWT, h.Cfg.JWTExpiresAt))
+		mylog.PrintfDebugStd(fmt.Sprintf("!(h.cfg.UseJWT && h.cfg.JWTExpiresAt > 0). Nothing to do, useJWT='%t', JWTExpiresAt='%v'", h.cfg.UseJWT, h.cfg.JWTExpiresAt))
 	}
 
 	mylog.PrintfDebugStd("SUCCESS")

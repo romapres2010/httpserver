@@ -1,1 +1,1 @@
-make -f make check
+make -f make_windows check
