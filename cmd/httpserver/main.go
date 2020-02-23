@@ -99,9 +99,7 @@ func main() {
 		// настраиваем параллельное логирование в файл
 		if logFileFlag != "" {
 			// добавляем в имя лог файла дату и время
-			if strings.Contains(logFileFlag, "%s") {
-				logFileFlag = fmt.Sprintf(logFileFlag, time.Now().Format("2006_01_02_150405"))
-			}
+			logFileFlag = strings.Replace(logFileFlag, "%s", time.Now().Format("2006_01_02_150405"), 1)
 
 			f, err := os.OpenFile(logFileFlag, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 			if err != nil {
@@ -138,8 +136,17 @@ func main() {
 			}
 		}
 
+		// Создаем конфигурацию демона
+		daemonCfg := &daemon.Config{
+			ConfigFileName: httpConfigFileFlag,
+			ListenSpec:     listenStringFlag,
+			JwtKey:         []byte(jwtKeyFlag),
+			HTTPUserID:     httpUserIDFlag,
+			HTTPUserPwd:    httpUserPwdFlag,
+		}
+
 		// Создаем новый демон
-		daemon, err := daemon.New(nil, httpConfigFileFlag, listenStringFlag, httpUserIDFlag, httpUserPwdFlag, []byte(jwtKeyFlag))
+		daemon, err := daemon.New(nil, daemonCfg)
 		if err != nil {
 			mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))
 			return err

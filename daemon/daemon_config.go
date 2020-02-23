@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	myerror "github.com/romapres2010/httpserver/error"
-	myhttp "github.com/romapres2010/httpserver/http"
-	"github.com/romapres2010/httpserver/http/handler"
-	httplog "github.com/romapres2010/httpserver/http/httplog"
+	"github.com/romapres2010/httpserver/httpserver"
+	"github.com/romapres2010/httpserver/httpserver/httplog"
+	"github.com/romapres2010/httpserver/httpserver/httpservice"
 	mylog "github.com/romapres2010/httpserver/log"
 	"github.com/sasbury/mini"
 	auth "gopkg.in/korylprince/go-ad-auth.v2"
@@ -47,7 +47,7 @@ func loadConfigFile(fileName string) (*mini.Config, error) {
 }
 
 // loadHTTPServerConfig load HTTP server confiuration from file
-func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *myhttp.Config) error {
+func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *httpserver.Config) error {
 	var err error
 
 	{ // секция с основными параметрами HTTP сервера
@@ -66,6 +66,9 @@ func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *myhttp.Config) err
 			return err
 		}
 		if HTTPServerCfg.MaxBodyBytes, err = loadIntFromSection(sectionName, config, "MaxBodyBytes", true, "0"); err != nil {
+			return err
+		}
+		if HTTPServerCfg.UseProfile, err = loadBoolFromSection(sectionName, config, "UseProfile", true, "false"); err != nil {
 			return err
 		}
 	} // секция с основными параметрами HTTP сервера
@@ -157,7 +160,7 @@ func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *myhttp.Config) err
 }
 
 // loadHTTPHandlerConfig load HTTP handler confiuration from file
-func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *handler.Config) error {
+func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *httpservice.Config) error {
 	var err error
 
 	{ // секция JWT
