@@ -1,0 +1,11 @@
+            <log:Header>
+                <log:MessageID>B8bxEGwHoTjnrD</log:MessageID>
+                <log:VerbCode>PDM.20.Create</log:VerbCode>
+                <log:ListOfContacts>
+                    <inf:Contact>
+                        <inf:Name>Administrator</inf:Name>
+                        <inf:Email>Administrator</inf:Email>
+                        <inf:PhoneNumber>+78994545</inf:PhoneNumber>
+                    </inf:Contact>
+                </log:ListOfContacts>
+            </log:Header>

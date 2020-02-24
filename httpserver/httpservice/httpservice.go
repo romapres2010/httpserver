@@ -78,21 +78,9 @@ func New(ctx context.Context, cfg *Config) (*Service, *httplog.Logger, error) {
 
 	// Наполним список обрабочиков
 	service.Handlers = map[string]Handler{
-		"/echo": Handler{
-			Path:        "/echo",
-			HundlerFunc: service.RecoverWrap(service.EchoHandler),
-			Method:      "GET",
-		},
-		"/signin": Handler{
-			Path:        "/signin",
-			HundlerFunc: service.RecoverWrap(service.SinginHandler),
-			Method:      "POST",
-		},
-		"/refresh": Handler{
-			Path:        "/refresh",
-			HundlerFunc: service.RecoverWrap(service.JWTRefreshHandler),
-			Method:      "POST",
-		},
+		"/echo":    Handler{"/echo", service.RecoverWrap(service.EchoHandler), "POST"},
+		"/signin":  Handler{"/signin", service.RecoverWrap(service.SinginHandler), "POST"},
+		"/refresh": Handler{"/refresh", service.RecoverWrap(service.JWTRefreshHandler), "POST"},
 	}
 
 	return service, service.logger, nil
@@ -111,7 +99,6 @@ func (s *Service) Shutdown() {
 // RecoverWrap cover handler functions with panic recoverer
 func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
 		var err error
 		defer func() {
 			r := recover()

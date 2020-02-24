@@ -190,7 +190,7 @@ func (s *Server) Run() error {
 // Shutdown HTTP server
 // =====================================================================
 func (s *Server) Shutdown() error {
-	// закрываем корневой контекст с ожидаением на закрытие простаивающих подключений
+	// закрываем контекст с ожидаением на закрытие простаивающих подключений
 	mylog.PrintfInfoStd("Waiting for shutdown of HTTP Server 30 sec")
 	cancelCtx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()

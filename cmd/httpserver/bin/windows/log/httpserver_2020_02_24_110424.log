@@ -1,0 +1,29 @@
+2020/02/24 11:04:24 [INFO] - main.go:[124] - main.func1() - HTTP Server is starting up. Version '0.0.5, commit '7a93bc6', build time '2020-02-23_19:56:33''. Log file '.\log\httpserver_2020_02_24_110424.log'
+2020/02/24 11:04:24 [INFO] - main.go:[128] - main.func1() - Set log level, arg[0]='INFO'
+2020/02/24 11:04:24 [INFO] - daemon.go:[46] - New() - Starting to create new daemon
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[28] - loadConfigFile() - Loading HTTP Server config from file 'httpserver.cfg'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[346] - loadIntFromSection() - load config - parameter 'ReadTimeout', val='6000'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[346] - loadIntFromSection() - load config - parameter 'WriteTimeout', val='6000'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[346] - loadIntFromSection() - load config - parameter 'IdleTimeout', val='6000'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[346] - loadIntFromSection() - load config - parameter 'MaxHeaderBytes', val='262144'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[346] - loadIntFromSection() - load config - parameter 'MaxBodyBytes', val='1048576'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[372] - loadBoolFromSection() - load config - parameter 'UseProfile', val='false'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[372] - loadBoolFromSection() - load config - parameter 'UseTLS', val='false'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[372] - loadBoolFromSection() - load config - parameter 'UseJWT', val='false'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[359] - loadStringFromSection() - load config - parameter 'AuthType', val='NONE'
+2020/02/24 11:04:24 [INFO] - daemon_config.go:[372] - loadBoolFromSection() - load config - parameter 'Enable', val='false'
+2020/02/24 11:04:24 [INFO] - httpserver.go:[58] - New() - Starting to create new HTTP server
+2020/02/24 11:04:24 [INFO] - httplog.go:[39] - NewLogger() - START
+2020/02/24 11:04:24 [INFO] - httpserver.go:[137] - New() - Created new TCP listener network = 'tcp', address='127.0.0.1:3000'
+2020/02/24 11:04:24 [INFO] - httpserver.go:[151] - New() - Handler is registered, arg[0]='/echo', arg[1]='POST'
+2020/02/24 11:04:24 [INFO] - httpserver.go:[151] - New() - Handler is registered, arg[0]='/signin', arg[1]='POST'
+2020/02/24 11:04:24 [INFO] - httpserver.go:[151] - New() - Handler is registered, arg[0]='/refresh', arg[1]='POST'
+2020/02/24 11:04:24 [INFO] - httpserver.go:[175] - New() - New HTTP server is created
+2020/02/24 11:04:24 [INFO] - daemon.go:[123] - New() - New daemon is created
+2020/02/24 11:04:24 [INFO] - daemon.go:[129] - (*Daemon).Run() - Starting
+2020/02/24 11:04:24 [INFO] - daemon.go:[139] - (*Daemon).Run() - Daemon is running. For exit <CTRL-c>
+2020/02/24 11:04:24 [INFO] - httpserver.go:[186] - (*Server).Run() - Starting HTTP server
+2020/02/24 11:05:47 [INFO] - daemon.go:[148] - (*Daemon).Run() - Got signal: interrupt, exiting
+2020/02/24 11:05:47 [INFO] - httpserver.go:[194] - (*Server).Shutdown() - Waiting for shutdown of HTTP Server 30 sec
+2020/02/24 11:05:47 [INFO] - daemon.go:[156] - (*Daemon).Run() - Closing daemon context
+2020/02/24 11:05:47 [INFO] - main.go:[162] - main.func1() - HTTP Server is shutdown

@@ -13,11 +13,11 @@ func (s *Service) EchoHandler(w http.ResponseWriter, r *http.Request) {
 	mylog.PrintfDebugStd("START   ==================================================================================")
 
 	// Запускаем обработчик
-	s.Process("GET", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
+	s.Process("POST", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
 		mylog.PrintfDebugStd("START", reqID)
 
 		// формируем ответ
-		header := make(map[string]string)
+		header := Header{}
 		header["Errcode"] = "0"
 		header["RequestID"] = fmt.Sprintf("%v", reqID)
 
