@@ -56,13 +56,51 @@ func (s *Service) EchoHandler(w http.ResponseWriter, r *http.Request) {
 
 ## Подход к организации HTTP обработчиков на Golang
 
-На следующем рисунке показана упрощенная UML диаграмма выполнения HTTP обработчика на примере выше описанного Echo handler. 
+На следующем рисунке показана упрощенная UML диаграмма выполнения HTTP обработчика на примере выше описанного EchoHandler. 
 
 Идея достаточно простая:
-- На верхнем уровне необходимо внедрить defer фукнцию для восстановления после паники. Это нужно делать обязательно, иначе падает весь сервер. На UML диаграмме это функция RecoverWrap - показана красным цветом.
-- Весь типовой код необходимо вынести в отдельный обработчик. Этот обраотчик встраивается в наш HTTP handler. На UML диаграмме это функция Process - показана синим цветом.
-- Собственно код функциональной обработки запроса и формирования ответа вынесен в анонимную функцию. На UML диаграмме это функция EchoHandler.func1 - показана зеленым цветом.
+- На верхнем уровне необходимо внедрить defer фукнцию для восстановления после паники. Это нужно делать обязательно, иначе падает весь сервер. На UML диаграмме - это анонимная функция RecoverWrap.func1, показаная красным цветом.
+- Весь типовой код необходимо вынести в отдельный обработчик. Этот обработчик встраивается в наш HTTP handler. На UML диаграмме это функция Process - показана синим цветом.
+- Собственно код функциональной обработки запроса и формирования ответа вынесен в анонимную функцию в нашем HTTP handler. На UML диаграмме это функция EchoHandler.func1 - показана зеленым цветом. 
 
 ![http_handler](https://raw.githubusercontent.com/romapres2010/httpserver/master/img/http_handler.png)
 
+## Пример кода
 
+При регистрация обработчика в роутере, регистрируется не собственно обработчик EchoHandler, а анонимная функция обработки паники (она возвращается функцией RecoverWrap), котрая уже вызывает наш обработчик EchoHandler.
+``` go
+router.HandleFunc("/echo", service.RecoverWrap(http.HandlerFunc(service.EchoHandler))).Methods("GET")
+```
+
+Текст функции RecoverWrap для регистрации анонимной функции обработки паники.  
+После объявления defer func() запускается собственно наш обработчик EchoHandler.
+``` go
+func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// объявляем функцию восстановления после паники
+		defer func() {
+			var err error
+			r := recover()
+			if r != nil {
+				switch t := r.(type) {
+				case string:
+					err = errors.New(t)
+				case error:
+					err = t
+				default:
+					err = errors.New("UNKNOWN ERROR")
+				}
+				// формируем текст ошибки для логирования
+				myerr := myerror.New("8888", fmt.Sprintf("UNKNOWN ERROR - recover from panic \n %+v", err.Error()), "RecoverWrap", "")
+				// кастомное логирование ошибки
+				s.LogError(myerr, w, http.StatusInternalServerError, 0)
+			}
+		}()
+
+		// вызываем обработчик
+		if handlerFunc != nil {
+			handlerFunc(w, r)
+		}
+	})
+}
+```

@@ -38,3 +38,7 @@
 2020/02/24 15:25:42 [DEBUG] - httpservice.go:[212] - (*Service).Process() - Writing HTTP response body, arg[0]='1', arg[1]='471'
 2020/02/24 15:25:42 [DEBUG] - httpservice.go:[219] - (*Service).Process() - Written HTTP response, arg[0]='1', arg[1]='471'
 2020/02/24 15:25:42 [DEBUG] - handler_echo.go:[33] - (*Service).EchoHandler() - SUCCESS ==================================================================================
+2020/02/24 17:57:09 [INFO] - daemon.go:[148] - (*Daemon).Run() - Got signal: interrupt, exiting
+2020/02/24 17:57:09 [INFO] - httpserver.go:[194] - (*Server).Shutdown() - Waiting for shutdown of HTTP Server 30 sec
+2020/02/24 17:57:09 [INFO] - daemon.go:[156] - (*Daemon).Run() - Closing daemon context
+2020/02/24 17:57:09 [INFO] - main.go:[162] - main.func1() - HTTP Server is shutdown

@@ -99,8 +99,9 @@ func (s *Service) Shutdown() {
 // RecoverWrap cover handler functions with panic recoverer
 func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var err error
+		// объявляем функцию восстановления после паники
 		defer func() {
+			var err error
 			r := recover()
 			if r != nil {
 				switch t := r.(type) {
@@ -111,12 +112,17 @@ func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 				default:
 					err = errors.New("UNKNOWN ERROR")
 				}
-
+				// формируем текст ошибки для логирования
 				myerr := myerror.New("8888", fmt.Sprintf("UNKNOWN ERROR - recover from panic \n %+v", err.Error()), "RecoverWrap", "")
+				// кастомное логирование ошибки
 				s.LogError(myerr, w, http.StatusInternalServerError, 0)
 			}
 		}()
-		handlerFunc.ServeHTTP(w, r)
+
+		// вызываем обработчик
+		if handlerFunc != nil {
+			handlerFunc(w, r)
+		}
 	})
 }
 
