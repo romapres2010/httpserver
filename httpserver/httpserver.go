@@ -21,6 +21,8 @@ type Server struct {
 	ctx    context.Context    // контекст при инициации сервиса
 	cancel context.CancelFunc // функция закрытия контекста
 	cfg    *Config            // конфигурация HTTP сервера
+	errCh  chan error         // канал ошибок
+	stopCh chan struct{}      // канал подтверждения об успешном закрытии HTTP сервера
 
 	// вложенные сервисы
 	listener    net.Listener         // листинер HTTP сервера
@@ -32,48 +34,50 @@ type Server struct {
 
 // Config repesent HTTP server options
 type Config struct {
-	ListenSpec     string // HTTP listener address string
-	ReadTimeout    int    // HTTP read timeout duration in sec - default 60 sec
-	WriteTimeout   int    // HTTP write timeout duration in sec - default 60 sec
-	IdleTimeout    int    // HTTP idle timeout duration in sec - default 60 sec
-	MaxHeaderBytes int    // HTTP max header bytes - default 1 MB
-	MaxBodyBytes   int    // HTTP max body bytes - default 0 - unlimited
-	UseProfile     bool   // use Go profiling
-	UseTLS         bool   // use Transport Level Security
-	UseHSTS        bool   // use HTTP Strict Transport Security
-	TLSSertFile    string // TLS Sertificate file name
-	TLSKeyFile     string // TLS Private key file name
-	TLSMinVersion  uint16 // TLS min version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
-	TLSMaxVersion  uint16 // TLS max version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
+	ListenSpec      string // HTTP listener address string
+	ReadTimeout     int    // HTTP read timeout duration in sec - default 60 sec
+	WriteTimeout    int    // HTTP write timeout duration in sec - default 60 sec
+	IdleTimeout     int    // HTTP idle timeout duration in sec - default 60 sec
+	MaxHeaderBytes  int    // HTTP max header bytes - default 1 MB
+	MaxBodyBytes    int    // HTTP max body bytes - default 0 - unlimited
+	UseProfile      bool   // use Go profiling
+	UseTLS          bool   // use Transport Level Security
+	UseHSTS         bool   // use HTTP Strict Transport Security
+	TLSSertFile     string // TLS Sertificate file name
+	TLSKeyFile      string // TLS Private key file name
+	TLSMinVersion   uint16 // TLS min version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
+	TLSMaxVersion   uint16 // TLS max version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
+	ShutdownTimeout int    // HTTP server shutdown timeout in sec - default 30 sec
 
 	// конфигурация вложенных сервисов
 	ServiceCfg httpservice.Config // конфигурация HTTP сервиса
 }
 
-// New create new server
-func New(ctx context.Context, cfg *Config) (*Server, error) {
+// New create HTTP server
+func New(ctx context.Context, errCh chan error, cfg *Config) (*Server, error) {
 	var err error
 	var server *Server
 
-	mylog.PrintfInfoStd("Starting to create new HTTP server")
+	mylog.PrintfInfoMsg("Creating new HTTP server")
 
 	{ // входные проверки
 		if cfg == nil {
-			errM := fmt.Sprintf("Empty config")
-			mylog.PrintfErrorStd(errM)
-			return nil, myerror.New("6030", errM, "", "")
+			myerr := myerror.New("6030", "Empty HTTP server config")
+			mylog.PrintfErrorInfo(myerr)
+			return nil, myerr
 		}
 		if cfg.ListenSpec == "" {
-			errM := fmt.Sprintf("Empty http listener address")
-			mylog.PrintfErrorStd(errM)
-			return nil, myerror.New("6030", errM, "", "")
+			myerr := myerror.New("6030", "Empty HTTP listener address")
+			mylog.PrintfErrorInfo(myerr)
+			return nil, myerr
 		}
-		// ... дополнительные проверки
 	} // входные проверки
 
 	// Создаем новый сервер
 	server = &Server{
-		cfg: cfg,
+		cfg:    cfg,
+		errCh:  errCh,
+		stopCh: make(chan struct{}, 1), // канал подтверждения об успешном закрытии HTTP сервера
 	}
 
 	// создаем контекст с отменой
@@ -129,12 +133,12 @@ func New(ctx context.Context, cfg *Config) (*Server, error) {
 	{ // Определяем  листенер
 		server.listener, err = net.Listen("tcp", cfg.ListenSpec)
 		if err != nil {
-			errM := fmt.Sprintf("Failed to create new TCP listener network = 'tcp', address='%s'", cfg.ListenSpec)
-			mylog.PrintfErrorStd(errM)
-			return nil, myerror.WithCause("5006", errM, "net.Listen()", fmt.Sprintf("network='tcp', address='%s'", cfg.ListenSpec), "", err.Error())
+			myerr := myerror.WithCause("5006", "Failed to create new TCP listener: network = 'tcp', address", err, cfg.ListenSpec)
+			mylog.PrintfErrorInfo(myerr)
+			return nil, myerr
 		}
 
-		mylog.PrintfInfoStd(fmt.Sprintf("Created new TCP listener network = 'tcp', address='%s'", cfg.ListenSpec))
+		mylog.PrintfInfoMsg("Created new TCP listener: network = 'tcp', address", cfg.ListenSpec)
 	} // Определяем  листенер
 
 	{ // Настраиваем роутер
@@ -148,13 +152,13 @@ func New(ctx context.Context, cfg *Config) (*Server, error) {
 		if server.httpService.Handlers != nil {
 			for _, h := range server.httpService.Handlers {
 				server.router.HandleFunc(h.Path, h.HundlerFunc).Methods(h.Method)
-				mylog.PrintfInfoStd("Handler is registered", h.Path, h.Method)
+				mylog.PrintfInfoMsg("Handler is registered: Path, Method", h.Path, h.Method)
 			}
 		}
 
 		// Регистрация pprof-обработчиков
 		if server.cfg.UseProfile {
-			mylog.PrintfInfoStd("'/debug/pprof' is registered")
+			mylog.PrintfInfoMsg("'/debug/pprof' is registered")
 
 			pprofrouter := server.router.PathPrefix("/debug/pprof").Subrouter()
 			pprofrouter.HandleFunc("/", pprof.Index)
@@ -172,38 +176,62 @@ func New(ctx context.Context, cfg *Config) (*Server, error) {
 		}
 	} // Настраиваем роутер
 
-	mylog.PrintfInfoStd("New HTTP server is created")
+	mylog.PrintfInfoMsg("HTTP server is created")
 	return server, nil
 }
 
 // Run HTTP server - wait for error or exit
-// =====================================================================
 func (s *Server) Run() error {
+	// Функция восстановления после паники
+	defer func() {
+		var myerr error
+		r := recover()
+		if r != nil {
+			msg := "HTTP server recover from panic"
+			switch t := r.(type) {
+			case string:
+				myerr = myerror.New("8888", msg, t)
+			case error:
+				myerr = myerror.WithCause("8888", msg, t)
+			default:
+				myerr = myerror.New("8888", msg)
+			}
+			mylog.PrintfErrorInfo(myerr) // логируем ошибку
+			s.errCh <- myerr             // передаем ошибку в канал для уведомления daemon
+		}
+	}()
+
+	// Запускаем HTTP сервер
 	if s.cfg.UseTLS {
-		mylog.PrintfInfoStd(fmt.Sprintf("Starting HTTPS server, TLSSertFile='%s', TLSKeyFile='%s', TLSConfig='%+v'", s.cfg.TLSSertFile, s.cfg.TLSKeyFile, s.httpServer.TLSConfig))
+		mylog.PrintfInfoMsg("Starting HTTPS server: TLSSertFile, TLSKeyFile", s.cfg.TLSSertFile, s.cfg.TLSKeyFile)
 		return s.httpServer.ServeTLS(s.listener, s.cfg.TLSSertFile, s.cfg.TLSKeyFile)
 	}
-	mylog.PrintfInfoStd(fmt.Sprintf("Starting HTTP server"))
+	mylog.PrintfInfoMsg(fmt.Sprintf("Starting HTTP server"))
 	return s.httpServer.Serve(s.listener)
 }
 
 // Shutdown HTTP server
-// =====================================================================
 func (s *Server) Shutdown() error {
-	// закрываем контекст с ожидаением на закрытие простаивающих подключений
-	mylog.PrintfInfoStd("Waiting for shutdown of HTTP Server 30 sec")
-	cancelCtx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
+	mylog.PrintfInfoMsg("Waiting for shutdown HTTP Server: sec", s.cfg.ShutdownTimeout)
+
+	// создаем новый контекст с отменой и отсрочкой ShutdownTimeout
+	cancelCtx, cancel := context.WithTimeout(s.ctx, time.Duration(s.cfg.ShutdownTimeout*int(time.Second)))
 	defer cancel()
 
-	err := s.httpServer.Shutdown(cancelCtx)
-	if err != nil {
-		errM := "Error shutdown HTTP server"
-		mylog.PrintfErrorStd(errM)
-		return myerror.WithCause("8003", errM, "server.Shutdown", "", "", err.Error())
+	// ожидаем закрытия активных подключений в течении ShutdownTimeout
+	if err := s.httpServer.Shutdown(cancelCtx); err != nil {
+		myerr := myerror.WithCause("8003", "Failed to shutdown HTTP server: sec", err, s.cfg.ShutdownTimeout)
+		mylog.PrintfErrorInfo(myerr)
+		return myerr
 	}
 
 	// Останавливаем служебные сервисы
 	s.httpService.Shutdown()
+
+	mylog.PrintfInfoMsg("HTTP Server shutdown successfuly")
+
+	// подтверждение об успешном закрытии HTTP сервера
+	s.stopCh <- struct{}{}
 
 	return nil
 }

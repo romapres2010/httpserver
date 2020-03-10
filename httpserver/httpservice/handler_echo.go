@@ -8,13 +8,12 @@ import (
 )
 
 // EchoHandler handle echo page with request header and body
-// =====================================================================
 func (s *Service) EchoHandler(w http.ResponseWriter, r *http.Request) {
-	mylog.PrintfDebugStd("START   ==================================================================================")
+	mylog.PrintfDebugMsg("START   ==================================================================================")
 
-	// Запускаем обработчик
-	s.Process("POST", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
-		mylog.PrintfDebugStd("START", reqID)
+	// Запускаем обработчик, возврат ошибки игнорируем
+	_ = s.Process("POST", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
+		mylog.PrintfDebugMsg("START: reqID", reqID)
 
 		// формируем ответ
 		header := Header{}
@@ -26,9 +25,17 @@ func (s *Service) EchoHandler(w http.ResponseWriter, r *http.Request) {
 			header[key] = r.Header.Get(key)
 		}
 
-		mylog.PrintfDebugStd("SUCCESS", reqID)
+		// time.Sleep(time.Second * 120)
+
+		/*
+			myerr := myerror.New("8004", "Header 'Authorization' is not set")
+			mylog.PrintfErrorInfo(myerr)
+			return nil, nil, http.StatusInternalServerError, myerr
+		*/
+
+		mylog.PrintfDebugMsg("SUCCESS", reqID)
 		return requestBuf, header, http.StatusOK, nil
 	})
 
-	mylog.PrintfDebugStd("SUCCESS ==================================================================================")
+	mylog.PrintfDebugMsg("SUCCESS ==================================================================================")
 }

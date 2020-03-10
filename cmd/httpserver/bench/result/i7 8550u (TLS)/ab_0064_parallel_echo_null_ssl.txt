@@ -1,0 +1,51 @@
+This is ApacheBench, Version 2.3 <$Revision: 1843412 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient)
+
+
+Server Software:        
+Server Hostname:        127.0.0.1
+Server Port:            3000
+
+Document Path:          /echo
+Document Length:        Variable
+
+Concurrency Level:      64
+Time taken for tests:   13.561 seconds
+Complete requests:      100000
+Failed requests:        0
+Non-2xx responses:      100000
+Keep-Alive requests:    0
+Total transferred:      7600000 bytes
+Total body sent:        27400000
+HTML transferred:       4800000 bytes
+Requests per second:    7374.13 [#/sec] (mean)
+Time per request:       8.679 [ms] (mean)
+Time per request:       0.136 [ms] (mean, across all concurrent requests)
+Transfer rate:          547.30 [Kbytes/sec] received
+                        1973.16 kb/s sent
+                        2520.46 kb/s total
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.3      0       1
+Processing:     1    9   0.9      8      13
+Waiting:        0    6   1.7      6      13
+Total:          1    9   0.9      8      13
+WARNING: The median and mean for the processing time are not within a normal deviation
+        These results are probably not that reliable.
+WARNING: The median and mean for the total time are not within a normal deviation
+        These results are probably not that reliable.
+
+Percentage of the requests served within a certain time (ms)
+  50%      8
+  66%      9
+  75%      9
+  80%      9
+  90%     10
+  95%     10
+  98%     11
+  99%     11
+ 100%     13 (longest request)

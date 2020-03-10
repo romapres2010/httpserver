@@ -2,91 +2,114 @@ package errors
 
 import (
 	"fmt"
-	"io"
 	"runtime"
 	"strconv"
 	"strings"
+	"sync/atomic"
+
+	pkgerr "github.com/pkg/errors"
 )
+
+var errorID uint64 // уникальный номер ошибки
 
 // Error represent custom error
 type Error struct {
-	Code      string // код ошибки
-	Msg       string // сформатированное сообщение об ошибке
-	File      string // файл где произошла ошибка
-	Line      int    // строка кода
-	Method    string // дополнительная информация о методе, который привел к ошибке
-	Args      string // аргументы метода
-	CauseCode string // код ошибки - причины
-	CauseMes  string // текст ошибки - причины
-	Stack     *stack // стек вызова
+	ID       uint64 // уникальный номер ошибки
+	Code     string // код ошибки
+	Msg      string // текст ошибки
+	Caller   string // файл, строка и наименование метода в котором произошла ошибка
+	Args     string // строка аргументов
+	CauseErr error  // ошибка - причина
+	CauseMsg string // текст ошибки - причины
+	Trace    string // стек вызова
+}
+
+// getNextErrorID - запросить номер следующей ошибки
+func getNextErrorID() uint64 {
+	return atomic.AddUint64(&errorID, 1)
 }
 
 // Format output
-//     %s    print the error. If the error has a Cause it will be
-//           printed recursively.
-//     %v    see %s
-//     %+v   extended format. Each Frame of the error's StackTrace will
-//           be printed in detail.
+//     %s    print the error code, message, arguments, and cause message.
+//     %v    in addition to %s, print caller
+//     %+v   extended format. Each Frame of the error's StackTrace will be printed in detail.
 func (e *Error) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
+		fmt.Fprint(s, e.Error())
+		fmt.Fprintf(s, ", caller='%s'", e.Caller)
 		if s.Flag('+') {
-			_, _ = io.WriteString(s, e.Error())
-			e.Stack.Format(s, verb)
+			fmt.Fprintf(s, ", trace=%s", e.Trace)
 			return
 		}
-		fallthrough
 	case 's':
-		_, _ = io.WriteString(s, e.Msg)
+		fmt.Fprint(s, e.Error())
 	case 'q':
-		fmt.Fprintf(s, "%q", e.Msg)
+		fmt.Fprint(s, e.Error())
 	}
 }
 
 //Error print custom error
 func (e *Error) Error() string {
-	return fmt.Sprintf("[ERROR] code=[%s], caller='%s:%s', method='%s', args='%s', mes='%s', causecode='%s', causemes='%s'", e.Code, e.File, strconv.Itoa(e.Line), e.Method, e.Args, e.Msg, e.CauseCode, e.CauseMes)
+	mes := fmt.Sprintf("ID=[%v], code=[%s], mes='%s'", e.ID, e.Code, e.Msg)
+	if e.Args != "" {
+		mes = fmt.Sprintf("%s, args='%s'", mes, e.Args)
+	}
+	if e.CauseMsg != "" {
+		mes = fmt.Sprintf("%s, causemes='%s'", mes, e.CauseMsg)
+	}
+	return mes
 }
 
 // New - create new custom error
-func New(code string, msg string, method string, args string) error {
+func New(code string, msg string, args ...interface{}) error {
 	err := Error{
+		ID:     getNextErrorID(),
 		Code:   code,
 		Msg:    msg,
-		Method: method,
-		Args:   args,
-		Stack:  callers(),
+		Caller: caller(2),
+		Args:   getArgsString(args...),               // get formated string with arguments
+		Trace:  fmt.Sprintf("'%+v'", pkgerr.New("")), // create err and print it trace
 	}
-
-	err.File, err.Line = CallerFileLine(2)
 
 	return &err
 }
 
 // WithCause - create new custom error with cause
-func WithCause(code string, msg string, method string, args string, causeCode string, causeMes string) error {
+func WithCause(code string, msg string, causeErr error, args ...interface{}) error {
 	err := Error{
-		Code:      code,
-		Msg:       msg,
-		Method:    method,
-		Args:      args,
-		CauseCode: causeCode,
-		CauseMes:  causeMes,
-		Stack:     callers(),
+		ID:       getNextErrorID(),
+		Code:     code,
+		Msg:      msg,
+		Caller:   caller(2),
+		Args:     getArgsString(args...),               // get formated string with arguments
+		Trace:    fmt.Sprintf("'%+v'", pkgerr.New("")), // create err and print it trace
+		CauseMsg: fmt.Sprintf("'%+v'", causeErr),       // get formated string from cause error
+		CauseErr: causeErr,
 	}
-
-	err.File, err.Line = CallerFileLine(2)
 
 	return &err
 }
 
-// CallerFileLine returns a Valuer that returns a file and line
-func CallerFileLine(depth int) (string, int) {
-	_, file, line, _ := runtime.Caller(depth)
-	_ = line
-	idx := strings.LastIndexByte(file, '/')
-	// using idx+1 below handles both of following cases:
-	// idx == -1 because no "/" was found, or
-	// idx >= 0 and we want to start at the character after the found "/".
-	return file[idx+1:], line
+// getArgsString return formated string with arguments
+func getArgsString(args ...interface{}) (argsStr string) {
+	for _, arg := range args {
+		if arg != nil {
+			argsStr = argsStr + fmt.Sprintf("'%v', ", arg)
+		}
+	}
+	argsStr = strings.TrimRight(argsStr, ", ")
+	return
+}
+
+// caller returns a Valuer that returns a file and line from a specified depth in the callstack.
+func caller(depth int) string {
+	pc := make([]uintptr, 15)
+	n := runtime.Callers(depth+1, pc)
+	frame, _ := runtime.CallersFrames(pc[:n]).Next()
+	idxFile := strings.LastIndexByte(frame.File, '/')
+	idx := strings.LastIndexByte(frame.Function, '/')
+	idxName := strings.IndexByte(frame.Function[idx+1:], '.') + idx + 1
+
+	return frame.File[idxFile+1:] + ":[" + strconv.Itoa(frame.Line) + "] - " + frame.Function[idxName+1:] + "()"
 }

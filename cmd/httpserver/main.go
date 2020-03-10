@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -76,13 +77,12 @@ var flags = []cli.Flag{
 	cli.StringFlag{
 		Name:        "logfile, log",
 		Usage:       "Log file name",
-		Required:    true,
+		Required:    false,
 		Destination: &logFileFlag,
-		Value:       "httpserver_%s.log", // %s время старта программы
 	},
 }
 
-//main - represent main function
+//main function
 func main() {
 	// Create new Application
 	app := cli.NewApp()
@@ -93,7 +93,7 @@ func main() {
 	app.Flags = flags // присваиваем ранее определенные флаги
 	app.Writer = os.Stderr
 
-	// Определяем единственное действие - запуск демона
+	// Определяем действие - запуск демона
 	app.Action = func(ctx *cli.Context) error {
 
 		// настраиваем параллельное логирование в файл
@@ -101,19 +101,21 @@ func main() {
 			// добавляем в имя лог файла дату и время
 			logFileFlag = strings.Replace(logFileFlag, "%s", time.Now().Format("2006_01_02_150405"), 1)
 
-			f, err := os.OpenFile(logFileFlag, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+			// Открываем лог файл на зпись
+			logFile, err := os.OpenFile(logFileFlag, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 			if err != nil {
-				myerr := myerror.WithCause("6020", "Error open log file", "os.OpenFile", fmt.Sprintf("logFileFlag='%s'", logFileFlag), "", err.Error())
-				mylog.PrintfErrorStd(fmt.Sprintf("%+v", myerr))
+				myerr := myerror.WithCause("6020", "Error open log file: Filename", err, logFileFlag)
+				mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr))
 				return myerr
 			}
+
 			// закрываем по выходу из демона
-			if f != nil {
-				defer f.Close()
+			if logFile != nil {
+				defer logFile.Close()
 			}
 
 			// Параллельно пишем в os.Stderr и файл
-			wrt := io.MultiWriter(os.Stderr, f)
+			wrt := io.MultiWriter(os.Stderr, logFile)
 
 			// Переопределяем глобальный логер на кастомный
 			mylog.InitLogger(wrt)
@@ -121,17 +123,17 @@ func main() {
 			mylog.InitLogger(os.Stderr)
 		}
 
-		mylog.PrintfInfoStd(fmt.Sprintf("HTTP Server is starting up. Version '%s'. Log file '%s'", app.Version, logFileFlag))
+		mylog.PrintfInfoMsg("Server is starting up: Version, Logfile", app.Version, logFileFlag)
 
 		// Установим фильтр логирования
 		if debugFlag != "" {
-			mylog.PrintfInfoStd("Set log level", debugFlag)
+			mylog.PrintfInfoMsg("Set log level", debugFlag)
 			switch debugFlag {
 			case "DEBUG", "WARN", "ERROR", "INFO":
 				mylog.NewFilter(debugFlag)
 			default:
-				myerr := myerror.New("9001", fmt.Sprintf("Incorrect debugFlag '%s'. Only avaliable: DEBUG, WARN, INFO, ERROR.", debugFlag), "", "")
-				mylog.PrintfErrorStd(fmt.Sprintf("%+v", myerr))
+				myerr := myerror.New("9001", "Incorrect debugFlag. Only avaliable: DEBUG, INFO, ERROR.", debugFlag)
+				mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr))
 				return myerr
 			}
 		}
@@ -145,27 +147,25 @@ func main() {
 			HTTPUserPwd:    httpUserPwdFlag,
 		}
 
-		// Создаем новый демон
-		daemon, err := daemon.New(nil, daemonCfg)
-		if err != nil {
-			mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))
-			return err
+		// Создаем демон
+		daemon, myerr := daemon.New(context.Background(), daemonCfg)
+		if myerr != nil {
+			mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr)) // верхний уровень логирования с трассировкой
+			return myerr
 		}
 
 		// Стартуем демон и ожидаем завершения
-		err = daemon.Run()
-		if err != nil {
-			mylog.PrintfErrorStd(fmt.Sprintf("%+v", err))
-			return err
+		if myerr = daemon.Run(); myerr != nil {
+			mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr)) // верхний уровень логирования с трассировкой
+			return myerr
 		}
 
-		mylog.PrintfInfoStd("HTTP Server is shutdown")
+		mylog.PrintfInfoMsg("Server is shutdown")
 		return nil
 	}
 
 	// Запускаем приложение
-	err := app.Run(os.Args)
-	if err != nil {
+	if err := app.Run(os.Args); err != nil {
 		log.Printf("%+v", err)
 		os.Exit(1)
 	}

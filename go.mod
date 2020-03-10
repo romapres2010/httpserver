@@ -10,6 +10,7 @@ require (
 	github.com/gorilla/mux v1.7.4
 	github.com/hashicorp/logutils v1.0.0
 	github.com/kr/logfmt v0.0.0-20140226030751-b84e30acd515 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/sasbury/mini v0.0.0-20181226232755-dc74af49394b
 	github.com/urfave/cli v1.22.2
 	golang.org/x/text v0.3.2 // indirect

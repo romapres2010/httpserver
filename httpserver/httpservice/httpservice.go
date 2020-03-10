@@ -2,10 +2,11 @@ package httpservice
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"strings"
+	"sync/atomic"
 
 	myerror "github.com/romapres2010/httpserver/error"
 	httplog "github.com/romapres2010/httpserver/httpserver/httplog"
@@ -25,6 +26,9 @@ type Handler struct {
 // Handlers represent HTTP handlers map
 type Handlers map[string]Handler
 
+// уникальный номер HTTP запроса
+var requestID uint64
+
 // Service represent HTTP service
 type Service struct {
 	сtx      context.Context    // корневой контекст при инициации сервиса
@@ -38,19 +42,22 @@ type Service struct {
 
 // Config repsent HTTP Service configurations
 type Config struct {
-	MaxBodyBytes int    // максимальный размер тела сообщения - 0 не ограничено
-	UseTLS       bool   // признак использования SSL
-	UseHSTS      bool   // использовать HTTP Strict Transport Security
-	UseJWT       bool   // use JSON web token (JWT)
-	JWTExpiresAt int    // JWT expiry time in seconds - 0 without restriction
-	JwtKey       []byte // JWT secret key
-	AuthType     string // тип аутентификации NONE, INTERNAL, MSAD
-	HTTPUserID   string // пользователь для HTTP Basic Authentication передается через командую строку
-	HTTPUserPwd  string // пароль для HTTP Basic Authentication передается через командую строку
-	MSADServer   string // MS Active Directory server
-	MSADPort     int    // MS Active Directory Port
-	MSADBaseDN   string // MS Active Directory BaseDN
-	MSADSecurity int    // MS Active Directory Security: SecurityNone, SecurityTLS, SecurityStartTLS
+	MaxBodyBytes       int    // максимальный размер тела сообщения - 0 не ограничено
+	UseTLS             bool   // признак использования SSL
+	UseHSTS            bool   // использовать HTTP Strict Transport Security
+	UseJWT             bool   // use JSON web token (JWT)
+	JWTExpiresAt       int    // JWT expiry time in seconds - 0 without restriction
+	JwtKey             []byte // JWT secret key
+	AuthType           string // тип аутентификации NONE, INTERNAL, MSAD
+	HTTPUserID         string // пользователь для HTTP Basic Authentication передается через командую строку
+	HTTPUserPwd        string // пароль для HTTP Basic Authentication передается через командую строку
+	MSADServer         string // MS Active Directory server
+	MSADPort           int    // MS Active Directory Port
+	MSADBaseDN         string // MS Active Directory BaseDN
+	MSADSecurity       int    // MS Active Directory Security: SecurityNone, SecurityTLS, SecurityStartTLS
+	HTTPErrorLogHeader bool   // логирование ошибок в заголовок HTTP ответа
+	HTTPErrorLogBody   bool   // логирование ошибок в тело HTTP ответа
+	HTTPLog            bool   // логирование HTTP трафика в файл
 
 	// конфигурация вложенных сервисов
 	LogCfg httplog.Config // конфигурация HTTP логирования
@@ -86,14 +93,18 @@ func New(ctx context.Context, cfg *Config) (*Service, *httplog.Logger, error) {
 	return service, service.logger, nil
 }
 
+// GetNextRequestID - запросить номер следующего HTTP запроса
+func GetNextRequestID() uint64 {
+	return atomic.AddUint64(&requestID, 1)
+}
+
 // Shutdown shutting down service
 func (s *Service) Shutdown() {
 	// Закрываем Logger для корректного закрытия лог файла
 	if s.logger != nil {
 		s.logger.Close()
 	}
-
-	defer s.cancel()
+	defer s.cancel() // вызываем функцию закрытия контекста
 }
 
 // RecoverWrap cover handler functions with panic recoverer
@@ -101,21 +112,20 @@ func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// объявляем функцию восстановления после паники
 		defer func() {
-			var err error
+			var myerr error
 			r := recover()
 			if r != nil {
+				msg := "HTTP Handler recover from panic"
 				switch t := r.(type) {
 				case string:
-					err = errors.New(t)
+					myerr = myerror.New("8888", msg, t)
 				case error:
-					err = t
+					myerr = myerror.WithCause("8888", msg, t)
 				default:
-					err = errors.New("UNKNOWN ERROR")
+					myerr = myerror.New("8888", msg)
 				}
-				// формируем текст ошибки для логирования
-				myerr := myerror.New("8888", fmt.Sprintf("UNKNOWN ERROR - recover from panic \n %+v", err.Error()), "RecoverWrap", "")
-				// кастомное логирование ошибки
-				s.LogError(myerr, w, http.StatusInternalServerError, 0)
+				// расширенное логирование ошибки в контексте HTTP
+				s.processError(myerr, w, http.StatusInternalServerError, 0)
 			}
 		}()
 
@@ -127,59 +137,64 @@ func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 }
 
 // Process - represent server common task in process incoming HTTP request
-func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request, fn func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error)) {
+func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request, fn func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error)) error {
 	var err error
-	var reqID uint64 // уникальный номер Request
+	var myerr error
 
-	// логируем входящий HTTP запрос, одновременно получаем ID Request
+	// Получить уникальный номер HTTP запроса
+	reqID := GetNextRequestID() // уникальный ID Request
+
+	// логируем входящий HTTP запрос
 	if s.logger != nil {
-		reqID, _ = s.logger.LogHTTPInRequest(s.сtx, r)
-		mylog.PrintfDebugStd("Logging HTTP request", reqID)
+		_ = s.logger.LogHTTPInRequest(s.сtx, r, reqID) // При сбое HTTP логирования, делаем системное логирование, но работу не останавливаем
+		mylog.PrintfDebugMsg("Logging HTTP in request: reqID", reqID)
 	}
 
 	// проверим разрешенный метод
-	mylog.PrintfDebugStd("Check allowed HTTP method", reqID, r.Method, method)
+	mylog.PrintfDebugMsg("Check allowed HTTP method: reqID, request.Method, method", reqID, r.Method, method)
 	if r.Method != method {
-		myerr := myerror.New("8000", fmt.Sprintf("Not allowed method '%s', reqID '%v'", r.Method, reqID), "", "")
-		s.LogError(myerr, w, http.StatusMethodNotAllowed, reqID)
-		return
+		myerr = myerror.New("8000", "HTTP method is not allowed: reqID, request.Method, method", reqID, r.Method, method)
+		mylog.PrintfErrorInfo(myerr)
+		s.processError(myerr, w, http.StatusMethodNotAllowed, reqID) // расширенное логирование ошибки в контексте HTTP
+		return myerr
 	}
 
 	// Если включен режим аутентификации без использования JWT токена, то проверять пользователя и пароль каждый раз
-	mylog.PrintfDebugStd("Check authentication method", reqID, s.cfg.AuthType)
+	mylog.PrintfDebugMsg("Check authentication method: reqID, AuthType", reqID, s.cfg.AuthType)
 	if (s.cfg.AuthType == "INTERNAL" || s.cfg.AuthType == "MSAD") && !s.cfg.UseJWT {
-		mylog.PrintfDebugStd(fmt.Sprintf("JWT is of. Need Authentication, reqID '%v'", reqID))
-		if _, err = s._checkBasicAuthentication(r); err != nil {
-			s.LogError(err, w, http.StatusUnauthorized, reqID)
-			return
+		mylog.PrintfDebugMsg("JWT is of. Need Authentication: reqID", reqID)
+		if _, myerr = s._checkBasicAuthentication(r); myerr != nil {
+			s.processError(myerr, w, http.StatusUnauthorized, reqID) // расширенное логирование ошибки в контексте HTTP
+			return myerr
 		}
 	}
 
 	// Если используем JWT - проверим токен
 	if s.cfg.UseJWT {
-		mylog.PrintfDebugStd("JWT is on. Check JSON web token", reqID)
-		if _, err = s._checkJWTFromCookie(r); err != nil {
-			s.LogError(err, w, http.StatusUnauthorized, reqID)
-			return
+		mylog.PrintfDebugMsg("JWT is on. Check JSON web token: reqID", reqID)
+		if _, myerr = s._checkJWTFromCookie(r); err != nil {
+			s.processError(myerr, w, http.StatusUnauthorized, reqID) // расширенное логирование ошибки в контексте HTTP
+			return myerr
 		}
 	}
 
-	// считаем тело запроса
-	mylog.PrintfDebugStd("Reading request body", reqID)
+	// Считаем тело запроса
+	mylog.PrintfDebugMsg("Reading request body: reqID", reqID)
 	requestBuf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		myerr := myerror.WithCause("8001", fmt.Sprintf("Failed to read HTTP body, reqID '%v'", reqID), "ioutil.ReadAll()", "", "", err.Error())
-		s.LogError(myerr, w, http.StatusInternalServerError, reqID)
-		return
+		myerr = myerror.WithCause("8001", "Failed to read HTTP body: reqID", err, reqID)
+		mylog.PrintfErrorInfo(myerr)
+		s.processError(myerr, w, http.StatusInternalServerError, reqID) // расширенное логирование ошибки в контексте HTTP
+		return myerr
 	}
-	mylog.PrintfDebugStd("Read request body", reqID, len(requestBuf))
+	mylog.PrintfDebugMsg("Read request body: reqID, len(body)", reqID, len(requestBuf))
 
 	// вызываем обработчик
-	mylog.PrintfDebugStd("Calling external function handler", reqID)
-	responseBuf, header, status, err := fn(requestBuf, reqID)
-	if err != nil {
-		s.LogError(err, w, status, reqID)
-		return
+	mylog.PrintfDebugMsg("Calling external function handler: reqID, function", reqID, fn)
+	responseBuf, header, status, myerr := fn(requestBuf, reqID)
+	if myerr != nil {
+		s.processError(myerr, w, status, reqID) // расширенное логирование ошибки в контексте HTTP
+		return myerr
 	}
 
 	// use HSTS Strict-Transport-Security
@@ -187,81 +202,74 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	}
 
-	// Content-Type - требуемый тип контента в ответе
-	responseContentType := r.Header.Get("Content-Type-Response")
-	// Если не задан Content-Type-Response то берем его из запроса
-	if responseContentType == "" {
-		responseContentType = r.Header.Get("Content-Type")
-	}
-	header["Content-Type"] = responseContentType
-
 	// Логируем ответ в файл
 	if s.logger != nil {
-		mylog.PrintfDebugStd("Logging HTTP response", reqID)
-		s.logger.LogHTTPInResponse(s.сtx, header, responseBuf, status, reqID)
+		mylog.PrintfDebugMsg("Logging HTTP out response: reqID", reqID)
+		_ = s.logger.LogHTTPOutResponse(s.сtx, header, responseBuf, status, reqID) // При сбое HTTP логирования, делаем системное логирование, но работу не останавливаем
 	}
 
-	// запишем ответ в заголовок
-	mylog.PrintfDebugStd("Set HTTP response headers", reqID)
+	// Записываем заголовок ответа
+	mylog.PrintfDebugMsg("Set HTTP response headers: reqID", reqID)
 	if header != nil {
 		for key, h := range header {
 			w.Header().Set(key, h)
 		}
 	}
 
-	// запишем статус
-	mylog.PrintfDebugStd("Set HTTP response status", reqID, http.StatusText(status))
+	// Записываем HTTP статус ответа
+	mylog.PrintfDebugMsg("Set HTTP response status: reqID, Status", reqID, http.StatusText(status))
 	w.WriteHeader(status)
 
-	// записываем буфер в ответ
+	// Записываем тело ответа
 	if responseBuf != nil {
-		mylog.PrintfDebugStd("Writing HTTP response body", reqID, len(responseBuf))
+		mylog.PrintfDebugMsg("Writing HTTP response body: reqID, len(body)", reqID, len(responseBuf))
 		respWrittenLen, err := w.Write(responseBuf)
 		if err != nil {
-			myerr := myerror.WithCause("8002", fmt.Sprintf("Failed to write HTTP repsonse, reqID '%v'", reqID), "http.Write()", "", "", err.Error())
-			s.LogError(myerr, w, http.StatusInternalServerError, reqID)
-			return
+			myerr = myerror.WithCause("8002", "Failed to write HTTP repsonse: reqID", err)
+			mylog.PrintfErrorInfo(myerr)
+			s.processError(myerr, w, http.StatusInternalServerError, reqID) // расширенное логирование ошибки в контексте HTTP
+			return myerr
 		}
-		mylog.PrintfDebugStd("Written HTTP response", reqID, respWrittenLen)
+		mylog.PrintfDebugMsg("Written HTTP response: reqID, len(body)", reqID, respWrittenLen)
 	}
+
+	return nil
 }
 
-// LogError - log error into header, body and log
-// =====================================================================
-func (s *Service) LogError(err error, w http.ResponseWriter, status int, reqID uint64) {
-	// записываем в лог кроме статусов StatusNotFound
-	if status != http.StatusNotFound {
+// processError - log error into header and body
+func (s *Service) processError(err error, w http.ResponseWriter, status int, reqID uint64) {
 
-		// полная ошибка со стеком вызова
-		errM := fmt.Sprintf("RequestID '%v', err %+v", reqID, err)
+	// логируем в файл
+	mylog.PrintfErrorMsg(fmt.Sprintf("reqID:['%v'], %+v", reqID, err))
 
-		mylog.PrintfErrorStd1(errM)
+	if w != nil && err != nil {
+		// Запишем базовые заголовик
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("Request-ID", fmt.Sprintf("%v", reqID))
 
-		// дополнительно записываем в заголовок ответа
-		if w != nil {
-			// если тип ошибки myerror.Error, то возьмем коды из нее
+		if s.cfg.HTTPErrorLogHeader {
+			// Заменим в заголовке запрещенные символы на пробел
+			// carriage return (CR, ASCII 0xd), line feed (LF, ASCII 0xa), and the zero character (NUL, ASCII 0x0)
+			headerReplacer := strings.NewReplacer("\x0a", " ", "\x0d", " ", "\x00", " ")
+
+			// Запишем текст ошибки в заголовок ответа
 			if myerr, ok := err.(*myerror.Error); ok {
-				w.Header().Set("Errcode", myerr.Code)
-				w.Header().Set("Errmes", myerr.Msg)
-				w.Header().Set("Causeerrcode", fmt.Sprintf("%v", myerr.CauseCode))
-				w.Header().Set("Causeerrmes", fmt.Sprintf("%v", myerr.CauseMes))
+				// если тип ошибки myerror.Error, то возьмем коды из нее
+				w.Header().Set("Err-Code", headerReplacer.Replace(myerr.Code))
+				w.Header().Set("Err-Message", headerReplacer.Replace(fmt.Sprintf("%v", myerr)))
+				w.Header().Set("Err-Cause-Message", headerReplacer.Replace(myerr.CauseMsg))
+				w.Header().Set("Err-Trace", headerReplacer.Replace(myerr.Trace))
 			} else {
-				w.Header().Set("Errcode", "")
-				w.Header().Set("Errmes", err.Error())
+				w.Header().Set("Err-Message", headerReplacer.Replace(fmt.Sprintf("%+v", err)))
 			}
-			w.Header().Set("Errtrace", errM)
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.Header().Set("RequestID", fmt.Sprintf("%v", reqID))
-			w.WriteHeader(status)
-
-			fmt.Fprintln(w, errM)
 		}
-	} else { // http.StatusNotFound
-		// дополнительно записываем в заголовок ответа
-		if w != nil {
-			w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-			w.Header().Set("RequestID", fmt.Sprintf("%v", reqID))
-			w.WriteHeader(status)
+
+		// Запишем статус ответа
+		w.WriteHeader(status)
+
+		if s.cfg.HTTPErrorLogBody {
+			// Запишем ошибку в тело ответа
+			fmt.Fprintln(w, fmt.Sprintf("reqID:['%v'], %+v", reqID, err))
 		}
 	}
 }

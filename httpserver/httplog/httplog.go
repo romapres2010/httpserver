@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"net/http"
@@ -17,9 +16,8 @@ import (
 
 // Logger represent аn HTTP logger
 type Logger struct {
-	file     *os.File // файл логирования HTTP вызовов
-	cfg      *Config  // файл конфигурации
-	reqCount uint64   // уникальный номер запроса
+	file *os.File // файл логирования HTTP вызовов
+	cfg  *Config  // файл конфигурации
 }
 
 // Config represent аn HTTP logger config
@@ -34,9 +32,7 @@ type Config struct {
 }
 
 // NewLogger - создает новый Logger
-// =====================================================================
 func NewLogger(ctx context.Context, cfg *Config) (*Logger, error) {
-	mylog.PrintfInfoStd("START")
 
 	log := &Logger{
 		cfg: cfg,
@@ -51,9 +47,9 @@ func NewLogger(ctx context.Context, cfg *Config) (*Logger, error) {
 		// Открываем файл для логирования
 		f, err := os.OpenFile(cfg.FileName, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 		if err != nil {
-			myerr := myerror.WithCause("6020", "Error open HTTP log file", "os.OpenFile", fmt.Sprintf("cfg.FileName='%s'", cfg.FileName), "", err.Error())
-			mylog.PrintfErrorStd(fmt.Sprintf("%+v", myerr))
-			return nil, err
+			myerr := myerror.WithCause("6020", "Error open HTTP log file: Filename", err, cfg.FileName)
+			mylog.PrintfErrorInfo(myerr)
+			return nil, myerr
 		}
 
 		// сохраняем открытый дескриптор файла логирования
@@ -63,14 +59,7 @@ func NewLogger(ctx context.Context, cfg *Config) (*Logger, error) {
 	return log, nil
 }
 
-// GetNextReqID - запросить номер следующего запроса
-// =====================================================================
-func (log *Logger) GetNextReqID() uint64 {
-	return atomic.AddUint64(&log.reqCount, 1)
-}
-
-// Close - close Logger
-// =====================================================================
+// Close Logger
 func (log *Logger) Close() {
 	if log.file != nil {
 		_ = log.file.Close()
@@ -78,92 +67,62 @@ func (log *Logger) Close() {
 }
 
 // LogHTTPOutRequest process HTTP logging for Out request
-//================================================================
-func (log *Logger) LogHTTPOutRequest(ctx context.Context, req *http.Request) (uint64, error) {
-	var err error
-	var dump []byte
-
-	// запросим ID следующего Request
-	reqID := log.GetNextReqID()
-
-	// логируем
+func (log *Logger) LogHTTPOutRequest(ctx context.Context, req *http.Request, reqID uint64) error {
 	if log.cfg.Enable && log.file != nil {
-		// логируем запрос
 		if req != nil && log.cfg.LogOutReq {
-			dump, err = httputil.DumpRequestOut(req, log.cfg.LogBody)
+			dump, err := httputil.DumpRequestOut(req, log.cfg.LogBody)
 			if err != nil {
-				myerr := myerror.New("8020", fmt.Sprintf("Error dump HTTP Request"), "", "")
-				mylog.PrintfErrorStd(fmt.Sprintf("%+v", myerr)) // логируем сразу
-				return reqID, myerr
+				myerr := myerror.WithCause("8020", "Error dump HTTP Request: reqID", err, reqID)
+				mylog.PrintfErrorInfo(myerr)
+				return myerr
 			}
 			fmt.Fprintf(log.file, "'%s' Out Request '%v' BEGIN ==================================================================== \n", mylog.GetTimestampStr(), reqID)
 			fmt.Fprintf(log.file, "%+v\n", string(dump))
 			fmt.Fprintf(log.file, "'%s' Out Request '%v' END ==================================================================== \n", mylog.GetTimestampStr(), reqID)
 		}
 	}
-
-	return reqID, nil
+	return nil
 }
 
-// LogHTTPOutResponse process HTTP logging for Out response
-//================================================================
-func (log *Logger) LogHTTPOutResponse(ctx context.Context, resp *http.Response, reqID uint64) error {
-	var err error
-	var dump []byte
-
-	// логируем
+// LogHTTPInResponse process HTTP logging for In response
+func (log *Logger) LogHTTPInResponse(ctx context.Context, resp *http.Response, reqID uint64) error {
 	if log.cfg.Enable && log.file != nil {
-		// логируем запрос
-		if resp != nil && log.cfg.LogOutReq {
-			dump, err = httputil.DumpResponse(resp, log.cfg.LogBody)
+		if resp != nil && log.cfg.LogInResp {
+			dump, err := httputil.DumpResponse(resp, log.cfg.LogBody)
 			if err != nil {
-				myerr := myerror.New("8020", fmt.Sprintf("Error dump HTTP Response"), "", "")
-				mylog.PrintfErrorStd(fmt.Sprintf("%+v", myerr)) // логируем сразу
+				myerr := myerror.WithCause("8020", "Error dump HTTP Request: reqID", err, reqID)
+				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
-
 			fmt.Fprintf(log.file, "'%s' Out Response '%v' BEGIN ==================================================================== \n", mylog.GetTimestampStr(), reqID)
 			fmt.Fprintf(log.file, "%+v\n", string(dump))
 			fmt.Fprintf(log.file, "'%s' Out Response '%v' End ==================================================================== \n", mylog.GetTimestampStr(), reqID)
 		}
 	}
-
 	return nil
 }
 
 // LogHTTPInRequest process HTTP logging for In request
-//================================================================
-func (log *Logger) LogHTTPInRequest(ctx context.Context, req *http.Request) (uint64, error) {
-	var err error
-	var dump []byte
-
-	// запросим ID следующего Request
-	reqID := log.GetNextReqID()
-
-	// логируем в файл
+func (log *Logger) LogHTTPInRequest(ctx context.Context, req *http.Request, reqID uint64) error {
 	if log.cfg.Enable && log.file != nil {
-		// логируем запрос
 		if req != nil && log.cfg.LogInReq {
-			dump, err = httputil.DumpRequest(req, log.cfg.LogBody)
+			dump, err := httputil.DumpRequest(req, log.cfg.LogBody)
 			if err != nil {
-				myerr := myerror.New("8020", fmt.Sprintf("Error dump HTTP Request"), "", "")
-				mylog.PrintfErrorStd(fmt.Sprintf("%+v", myerr)) // логируем сразу
-				return reqID, myerr
+				myerr := myerror.WithCause("8020", "Error dump HTTP Request: reqID", err, reqID)
+				mylog.PrintfErrorInfo(myerr)
+				return myerr
 			}
 			fmt.Fprintf(log.file, "'%s' In Request '%v' BEGIN ==================================================================== \n", mylog.GetTimestampStr(), reqID)
 			fmt.Fprintf(log.file, "%+v\n", string(dump))
 			fmt.Fprintf(log.file, "'%s' In Request '%v' End ==================================================================== \n", mylog.GetTimestampStr(), reqID)
 		}
 	}
-
-	return reqID, nil
+	return nil
 }
 
-// LogHTTPInResponse process HTTP logging for In Response
-//================================================================
-func (log *Logger) LogHTTPInResponse(ctx context.Context, header map[string]string, responseBuf []byte, status int, reqID uint64) error {
-	// логируем в файл
-	if log.cfg.Enable && log.file != nil && log.cfg.LogInResp {
+// LogHTTPOutResponse process HTTP logging for Oout Response
+func (log *Logger) LogHTTPOutResponse(ctx context.Context, header map[string]string, responseBuf []byte, status int, reqID uint64) error {
+	if log.cfg.Enable && log.file != nil && log.cfg.LogOutResp {
 		// сформируем буффер с ответом
 		dump := make([]byte, 0)
 
@@ -187,6 +146,5 @@ func (log *Logger) LogHTTPInResponse(ctx context.Context, header map[string]stri
 		fmt.Fprintf(log.file, "%+v\n", string(dump))
 		fmt.Fprintf(log.file, "'%s' In Response '%v' End ==================================================================== \n", mylog.GetTimestampStr(), reqID)
 	}
-
 	return nil
 }

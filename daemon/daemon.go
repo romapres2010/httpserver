@@ -2,7 +2,6 @@ package daemon
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"os/signal"
 	"syscall"
@@ -21,8 +20,8 @@ type Daemon struct {
 	cfg    *Config            // конфигурация демона
 
 	// Сервисы демона
-	httpserver *httpserver.Server // HTTP httpserver
-	// ... здесь добавляем новые сервисы
+	httpserver      *httpserver.Server // HTTP сервер
+	httpserverErrCh chan error         // канал ошибок для HTTP сервера
 }
 
 // Config repesent daemon options
@@ -35,36 +34,35 @@ type Config struct {
 
 	// Конфигурация вложенных сервисов
 	httpServerCfg httpserver.Config // конфигурация HTTP сервера
-	// ... здесь добавляем новые конфигурации
 }
 
-// New create new Daemon
+// New create Daemon
 func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 	var err error
 	var config *mini.Config
 
-	mylog.PrintfInfoStd("Starting to create new daemon")
+	mylog.PrintfInfoMsg("Create new daemon")
 
 	{ // входные проверки
 		if cfg == nil {
-			errM := fmt.Sprintf("Empty config")
-			mylog.PrintfErrorStd(errM)
-			return nil, myerror.New("6030", errM, "", "")
+			myerr := myerror.New("6030", "Empty daemon config")
+			mylog.PrintfErrorInfo(myerr)
+			return nil, myerr
 		}
 		if cfg.ConfigFileName == "" {
-			errM := fmt.Sprintf("Empty config file name")
-			mylog.PrintfErrorStd(errM)
-			return nil, myerror.New("6030", errM, "", "")
+			myerr := myerror.New("6030", "Empty config file name")
+			mylog.PrintfErrorInfo(myerr)
+			return nil, myerr
 		}
-		// ... дополнительные проверки
 	} // входные проверки
 
 	// Создаем новый демон
 	daemon := &Daemon{
-		cfg: cfg,
+		cfg:             cfg,
+		httpserverErrCh: make(chan error, 1), // канал ошибок HTTP сервера
 	}
 
-	// создаем контекст с отменой
+	// создаем корневой контекст с отменой
 	if ctx == nil {
 		daemon.ctx, daemon.cancel = context.WithCancel(context.Background())
 	} else {
@@ -76,7 +74,7 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 		return nil, err
 	}
 
-	{ // HTTP server
+	{ // создаем HTTP server
 		// Настраиваем конфигурацию HTTP server
 		if err = loadHTTPServerConfig(config, &daemon.cfg.httpServerCfg); err == nil {
 			daemon.cfg.httpServerCfg.ListenSpec = daemon.cfg.ListenSpec
@@ -97,73 +95,74 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 
 			// задан ли в командной строке JSON web token secret key
 			if daemon.cfg.httpServerCfg.ServiceCfg.UseJWT && daemon.cfg.JwtKey == nil {
-				errM := fmt.Sprintf("JSON web token secret key is null")
-				mylog.PrintfErrorStd(errM)
-				return nil, myerror.New("6023", errM, "", "")
+				myerr := myerror.New("6023", "JSON web token secret key is null")
+				mylog.PrintfErrorInfo(myerr)
+				return nil, myerr
 			}
 
 			// Настраиваем конфигурацию HTTP Logger
 			if err = loadHTTPLoggerConfig(config, &daemon.cfg.httpServerCfg.ServiceCfg.LogCfg); err != nil {
 				return nil, err
 			}
-
 		} else {
 			return nil, err
 		}
 
 		// Создаем HTTP server
-		if daemon.httpserver, err = httpserver.New(daemon.ctx, &daemon.cfg.httpServerCfg); err != nil {
+		if daemon.httpserver, err = httpserver.New(daemon.ctx, daemon.httpserverErrCh, &daemon.cfg.httpServerCfg); err != nil {
 			return nil, err
 		}
-	} // HTTP server
+	} // создаем HTTP server
 
-	{ // Настройка остальных сервисов
-	} // Настройка остальных сервисов
+	{ // создаем сервис ...
+		// ...
+	} // создаем сервис ...
 
-	mylog.PrintfInfoStd("New daemon is created")
+	mylog.PrintfInfoMsg("New daemon is created")
+
 	return daemon, nil
 }
 
-// Run - cтартует демон и ожидает сигнала выхода
+// Run daemon and wait for system signal or error in error chanel
 func (d *Daemon) Run() error {
-	mylog.PrintfInfoStd("Starting")
-
-	errCh := make(chan error, 1)        // канал ошибок
-	syscalCh := make(chan os.Signal, 1) // канал системных прирываний
+	mylog.PrintfInfoMsg("Starting daemon")
 
 	// запускаем в фоне HTTP сервер, возврат в канал ошибок
-	go func() { errCh <- d.httpserver.Run() }()
+	go func() { d.httpserverErrCh <- d.httpserver.Run() }()
 
-	// ... запуск остальных сервисов
-
-	mylog.PrintfInfoStd("Daemon is running. For exit <CTRL-c>")
+	mylog.PrintfInfoMsg("Daemon is running. For exit <CTRL-c>")
 
 	// подписываемся на системные прирывания
+	syscalCh := make(chan os.Signal, 1) // канал системных прирываний
 	signal.Notify(syscalCh, syscall.SIGINT, syscall.SIGTERM)
 
 	// ожидаем прерывания или возврат в канал ошибок
-	for {
-		select {
-		case s := <-syscalCh: //  ожидаем системное прирывание
-			mylog.PrintfInfoStd(fmt.Sprintf("Got signal: %v, exiting", s))
-
-			// Останавливаем HTTP сервер, ожидаем завершения активных подключений
-			err := d.httpserver.Shutdown()
-
-			// ... остановка остальных сервисов
-
-			// Закрываем корневой контекст
-			mylog.PrintfInfoStd("Closing daemon context")
-			d.cancel()
-			return err
-		case err := <-errCh: // возврат от сервисов в канал ошибок
-
-			// ... анализ ошибки и остановка остальных сервисов
-
-			// Закрываем корневой контекст
-			mylog.PrintfInfoStd("Closing daemon context")
-			d.cancel()
-			return err
-		}
+	select {
+	case s := <-syscalCh: //  ожидаем системное прирывание
+		mylog.PrintfInfoMsg("Exiting, got signal", s)
+		d.Shutdown() // останавливаем daemon
+		return nil
+	case err := <-d.httpserverErrCh: // возврат от HTTP сервера в канал ошибок
+		mylog.PrintfInfoMsg("Exiting, got error")
+		mylog.PrintfErrorInfo(err) // логируем ошибку
+		d.Shutdown()               // останавливаем daemon
+		return err
 	}
+}
+
+// Shutdown daemon
+func (d *Daemon) Shutdown() {
+	mylog.PrintfInfoMsg("Shutting down daemon")
+
+	// Закрываем корневой контекст
+	defer d.cancel()
+
+	// Останавливаем HTTP сервер, ожидаем завершения активных подключений
+	if myerr := d.httpserver.Shutdown(); myerr != nil {
+		mylog.PrintfErrorInfo(myerr) // логируем результат остановки HTTP сервера
+	}
+
+	// ... Останавливаем остальные сервисы
+
+	mylog.PrintfInfoMsg("Daemon is shutdown")
 }

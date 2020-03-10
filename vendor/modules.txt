@@ -6,6 +6,8 @@ github.com/dgrijalva/jwt-go
 github.com/gorilla/mux
 # github.com/hashicorp/logutils v1.0.0
 github.com/hashicorp/logutils
+# github.com/pkg/errors v0.9.1
+github.com/pkg/errors
 # github.com/russross/blackfriday/v2 v2.0.1
 github.com/russross/blackfriday/v2
 # github.com/sasbury/mini v0.0.0-20181226232755-dc74af49394b

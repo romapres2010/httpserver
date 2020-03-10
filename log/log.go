@@ -15,7 +15,7 @@ import (
 
 // logFilter represent a custom logger seting
 var logFilter = &logutils.LevelFilter{
-	Levels:   []logutils.LogLevel{"DEBUG", "INFO", "WARN", "ERROR"},
+	Levels:   []logutils.LogLevel{"DEBUG", "INFO", "ERROR"},
 	MinLevel: logutils.LogLevel("INFO"), // initial setting
 	Writer:   os.Stderr,                 // initial setting
 }
@@ -34,63 +34,52 @@ func NewFilter(lev string) {
 	logFilter.SetMinLevel(logutils.LogLevel(lev))
 }
 
-//PrintfInfoStd print message in Info level - standard mode
-func PrintfInfoStd(mes string, args ...interface{}) {
-	printfStd("INFO", 0, mes, args...)
+//PrintfInfoMsg print message in Info level
+func PrintfInfoMsg(mes string, args ...interface{}) {
+	printfMsg("[INFO]", 0, mes, args...)
 }
 
-//PrintfDebugStd print message in Debug level - standard mode
-func PrintfDebugStd(mes string, args ...interface{}) {
-	printfStd("DEBUG", 0, mes, args...)
+//PrintfDebugMsg print message in Debug level
+func PrintfDebugMsg(mes string, args ...interface{}) {
+	printfMsg("[DEBUG]", 0, mes, args...)
 }
 
-//PrintfErrorStd print message in Error level - standard mode
-func PrintfErrorStd(mes string, args ...interface{}) {
-	printfStd("ERROR", 0, mes, args...)
+//PrintfErrorInfo print error in Info level
+func PrintfErrorInfo(err error, args ...interface{}) {
+	printfMsg("[INFO]", 0, err.Error(), args...)
 }
 
-//PrintfErrorStd1 print message in Error level - standard mode
-func PrintfErrorStd1(mes string, args ...interface{}) {
-	printfStd("ERROR", 1, mes, args...)
+//PrintfErrorMsg print message in Error level
+func PrintfErrorMsg(mes string, args ...interface{}) {
+	printfMsg("[ERROR]", 0, mes, args...)
 }
 
-//PrintfWarnStd print message in Warn level - standard mode
-func PrintfWarnStd(mes string, args ...interface{}) {
-	printfStd("WARN", 0, mes, args...)
-}
-
-//PrintfWarnStd1 print message in Warn level - standard mode
-func PrintfWarnStd1(mes string, args ...interface{}) {
-	printfStd("WARN", 1, mes, args...)
-}
-
-//printfStd print message - standard mode
-func printfStd(level string, depth int, mes string, args ...interface{}) {
+//printfMsg print message
+func printfMsg(level string, depth int, mes string, args ...interface{}) {
 	// Chek for appropriate level of logging
-	if logFilter.Check([]byte("[" + level + "]")) {
+	if logFilter.Check([]byte(level)) {
 		argsStr := getArgsString(args...) // get formated string with arguments
 
-		// log to std log
 		if argsStr == "" {
-			log.Printf("[%s] - %s - %s", level, caller(depth+3), mes)
+			log.Printf("%s - %s - %s", level, caller(depth+3), mes)
 		} else {
-			log.Printf("[%s] - %s - %s%s", level, caller(depth+3), mes, argsStr)
+			log.Printf("%s - %s - %s [%s]", level, caller(depth+3), mes, argsStr)
 		}
 	}
 }
 
 // getArgsString return formated string with arguments
 func getArgsString(args ...interface{}) (argsStr string) {
-	for i, arg := range args {
+	for _, arg := range args {
 		if arg != nil {
-			argsStr = argsStr + fmt.Sprintf(", arg[%v]='%v'", i, arg)
+			argsStr = argsStr + fmt.Sprintf("'%v', ", arg)
 		}
 	}
+	argsStr = strings.TrimRight(argsStr, ", ")
 	return
 }
 
-// caller returns a Valuer that returns a file and line from a specified depth
-// in the callstack. Users will probably want to use Defaultcaller.
+// caller returns a Valuer that returns a file and line from a specified depth in the callstack.
 func caller(depth int) string {
 	pc := make([]uintptr, 15)
 	n := runtime.Callers(depth+1, pc)
