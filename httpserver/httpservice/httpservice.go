@@ -43,9 +43,9 @@ type Service struct {
 
 // Config repsent HTTP Service configurations
 type Config struct {
-	MaxBodyBytes       int    // максимальный размер тела сообщения - 0 не ограничено
-	UseTLS             bool   // признак использования SSL
-	UseHSTS            bool   // использовать HTTP Strict Transport Security
+	MaxBodyBytes       int    // HTTP max body bytes - default 0 - unlimited
+	UseTLS             bool   // use SSL
+	UseHSTS            bool   // use HTTP Strict Transport Security
 	UseJWT             bool   // use JSON web token (JWT)
 	JWTExpiresAt       int    // JWT expiry time in seconds - 0 without restriction
 	JwtKey             []byte // JWT secret key

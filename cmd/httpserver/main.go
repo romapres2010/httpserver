@@ -18,7 +18,7 @@ import (
 
 // Параметры, подменяемые компилятором при сборке бинарника
 var (
-	version   = "0.0.5"
+	version   = "0.0.3"
 	commit    = "unset"
 	buildTime = "unset"
 )
@@ -69,7 +69,7 @@ var flags = []cli.Flag{
 	},
 	cli.StringFlag{
 		Name:        "debug, d",
-		Usage:       "Debug mode: DEBUG, WARN, INFO, ERROR",
+		Usage:       "Debug mode: DEBUG, INFO, ERROR",
 		Required:    false,
 		Destination: &debugFlag,
 		Value:       "INFO",

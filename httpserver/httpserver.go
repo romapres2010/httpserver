@@ -47,7 +47,7 @@ type Config struct {
 	TLSKeyFile      string // TLS Private key file name
 	TLSMinVersion   uint16 // TLS min version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
 	TLSMaxVersion   uint16 // TLS max version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
-	ShutdownTimeout int    // HTTP server shutdown timeout in sec - default 30 sec
+	ShutdownTimeout int    // service shutdown timeout in sec - default 30 sec
 
 	// конфигурация вложенных сервисов
 	ServiceCfg httpservice.Config // конфигурация HTTP сервиса

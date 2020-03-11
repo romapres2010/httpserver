@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/http"
 
-	myerror "github.com/romapres2010/httpserver/error"
 	mylog "github.com/romapres2010/httpserver/log"
 )
 
@@ -25,12 +24,6 @@ func (s *Service) EchoHandler(w http.ResponseWriter, r *http.Request) {
 		for key := range r.Header {
 			header[key] = r.Header.Get(key)
 		}
-
-		// time.Sleep(time.Second * 120)
-
-		myerr := myerror.New("8004", "Error message", "arg1", "arg2", "arg3")
-		mylog.PrintfErrorInfo(myerr)
-		return nil, nil, http.StatusInternalServerError, myerr
 
 		mylog.PrintfDebugMsg("SUCCESS", reqID)
 		return requestBuf, header, http.StatusOK, nil
