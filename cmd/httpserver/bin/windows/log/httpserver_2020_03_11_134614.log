@@ -1,0 +1,52 @@
+2020/03/11 13:46:14 [INFO] - main.go:[126] - main.func1() - Server is starting up: Version, Logfile ['0.0.5, commit 'aaf4321', build time '2020-03-11_10:46:05'', '.\log\httpserver_2020_03_11_134614.log']
+2020/03/11 13:46:14 [INFO] - main.go:[130] - main.func1() - Set log level ['DEBUG']
+2020/03/11 13:46:14 [INFO] - daemon.go:[44] - New() - Create new daemon
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[27] - loadConfigFile() - Loading HTTP Server config from file: FileName ['httpserver.cfg']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[381] - loadIntFromSection() - Load config parameter: Section, Parameter, Value ['HTTP_SERVER', 'ReadTimeout', '6000']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[381] - loadIntFromSection() - Load config parameter: Section, Parameter, Value ['HTTP_SERVER', 'WriteTimeout', '6000']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[381] - loadIntFromSection() - Load config parameter: Section, Parameter, Value ['HTTP_SERVER', 'IdleTimeout', '6000']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[381] - loadIntFromSection() - Load config parameter: Section, Parameter, Value ['HTTP_SERVER', 'MaxHeaderBytes', '262144']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[381] - loadIntFromSection() - Load config parameter: Section, Parameter, Value ['HTTP_SERVER', 'MaxBodyBytes', '1048576']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[422] - loadBoolFromSection() - Load config parameter: Section, Parameter, Value ['HTTP_SERVER', 'UseProfile', 'false']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[381] - loadIntFromSection() - Load config parameter: Section, Parameter, Value ['HTTP_SERVER', 'ShutdownTimeout', '30']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[422] - loadBoolFromSection() - Load config parameter: Section, Parameter, Value ['TLS', 'UseTLS', 'false']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[422] - loadBoolFromSection() - Load config parameter: Section, Parameter, Value ['JWT', 'UseJWT', 'false']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[394] - loadStringFromSection() - Load config parameter: Section, Parameter, Value ['AUTHENTIFICATION', 'AuthType', 'NONE']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[422] - loadBoolFromSection() - Load config parameter: Section, Parameter, Value ['LOG', 'HTTPLog', 'true']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[394] - loadStringFromSection() - Load config parameter: Section, Parameter, Value ['LOG', 'HTTPLogFileName', './httplog/http%s.log']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[394] - loadStringFromSection() - Load config parameter: Section, Parameter, Value ['LOG', 'HTTPErrLog', 'HEADER | BODY']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[422] - loadBoolFromSection() - Load config parameter: Section, Parameter, Value ['LOG', 'HTTPLog', 'true']
+2020/03/11 13:46:14 [INFO] - daemon_config.go:[394] - loadStringFromSection() - Load config parameter: Section, Parameter, Value ['LOG', 'HTTPLogType', 'INREQ | OUTREQ | INRESP | OUTRESP | BODY']
+2020/03/11 13:46:14 [INFO] - httpserver.go:[61] - New() - Creating new HTTP server
+2020/03/11 13:46:14 [INFO] - httpserver.go:[141] - New() - Created new TCP listener: network = 'tcp', address ['127.0.0.1:3000']
+2020/03/11 13:46:14 [INFO] - httpserver.go:[155] - New() - Handler is registered: Path, Method ['/echo', 'POST']
+2020/03/11 13:46:14 [INFO] - httpserver.go:[155] - New() - Handler is registered: Path, Method ['/signin', 'POST']
+2020/03/11 13:46:14 [INFO] - httpserver.go:[155] - New() - Handler is registered: Path, Method ['/refresh', 'POST']
+2020/03/11 13:46:14 [INFO] - httpserver.go:[155] - New() - Handler is registered: Path, Method ['/httplog', 'POST']
+2020/03/11 13:46:14 [INFO] - httpserver.go:[179] - New() - HTTP server is created
+2020/03/11 13:46:14 [INFO] - daemon.go:[121] - New() - New daemon is created
+2020/03/11 13:46:14 [INFO] - daemon.go:[128] - (*Daemon).Run() - Starting daemon
+2020/03/11 13:46:14 [INFO] - daemon.go:[133] - (*Daemon).Run() - Daemon is running. For exit <CTRL-c>
+2020/03/11 13:46:14 [INFO] - httpserver.go:[209] - (*Server).Run() - Starting HTTP server
+2020/03/11 13:46:18 [DEBUG] - handler_log.go:[15] - (*Service).HTTPLogHandler() - START   ==================================================================================
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[152] - (*Service).Process() - Logging HTTP in request: reqID ['1']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[156] - (*Service).Process() - Check allowed HTTP method: reqID, request.Method, method ['1', 'POST', 'POST']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[165] - (*Service).Process() - Check authentication method: reqID, AuthType ['1', 'NONE']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[184] - (*Service).Process() - Reading request body: reqID ['1']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[192] - (*Service).Process() - Read request body: reqID, len(body) ['1', '0']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[195] - (*Service).Process() - Calling external function handler: reqID, function ['1', '0x7ff070']
+2020/03/11 13:46:18 [DEBUG] - handler_log.go:[19] - (*Service).HTTPLogHandler.func1() - START: reqID ['1']
+2020/03/11 13:46:18 [INFO] - httplog.go:[65] - (*Logger).SetConfig() - Set HTTP loger config: cfg ['{true true true true true true}']
+2020/03/11 13:46:18 [DEBUG] - handler_log.go:[73] - (*Service).HTTPLogHandler.func1() - SUCCESS ['1']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[209] - (*Service).Process() - Logging HTTP out response: reqID ['1']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[214] - (*Service).Process() - Set HTTP response headers: reqID ['1']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[222] - (*Service).Process() - Set HTTP response status: reqID, Status ['1', 'OK']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[227] - (*Service).Process() - Writing HTTP response body: reqID, len(body) ['1', '0']
+2020/03/11 13:46:18 [DEBUG] - httpservice.go:[235] - (*Service).Process() - Written HTTP response: reqID, len(body) ['1', '0']
+2020/03/11 13:46:18 [DEBUG] - handler_log.go:[77] - (*Service).HTTPLogHandler() - SUCCESS ==================================================================================
+2020/03/11 13:49:47 [INFO] - daemon.go:[142] - (*Daemon).Run() - Exiting, got signal ['interrupt']
+2020/03/11 13:49:47 [INFO] - daemon.go:[155] - (*Daemon).Shutdown() - Shutting down daemon
+2020/03/11 13:49:47 [INFO] - httpserver.go:[215] - (*Server).Shutdown() - Waiting for shutdown HTTP Server: sec ['30']
+2020/03/11 13:49:47 [INFO] - httpserver.go:[231] - (*Server).Shutdown() - HTTP Server shutdown successfuly
+2020/03/11 13:49:47 [INFO] - daemon.go:[167] - (*Daemon).Shutdown() - Daemon is shutdown
+2020/03/11 13:49:47 [INFO] - main.go:[163] - main.func1() - Server is shutdown

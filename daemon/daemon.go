@@ -82,8 +82,7 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 			return nil, err
 		}
 
-		// Настраиваем конфигурацию HTTP handler
-		if err = loadHTTPHandlerConfig(config, &daemon.cfg.httpServerCfg.ServiceCfg); err == nil {
+		{ // Настраиваем конфигурацию HTTP service
 			// Параметры из командной строки
 			daemon.cfg.httpServerCfg.ServiceCfg.HTTPUserID = daemon.cfg.HTTPUserID
 			daemon.cfg.httpServerCfg.ServiceCfg.HTTPUserPwd = daemon.cfg.HTTPUserPwd
@@ -93,20 +92,22 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 			daemon.cfg.httpServerCfg.ServiceCfg.UseHSTS = daemon.cfg.httpServerCfg.UseHSTS
 			daemon.cfg.httpServerCfg.ServiceCfg.MaxBodyBytes = daemon.cfg.httpServerCfg.MaxBodyBytes
 
-			// задан ли в командной строке JSON web token secret key
-			if daemon.cfg.httpServerCfg.ServiceCfg.UseJWT && daemon.cfg.JwtKey == nil {
-				myerr := myerror.New("6023", "JSON web token secret key is null")
-				mylog.PrintfErrorInfo(myerr)
-				return nil, myerr
-			}
+			if err = loadHTTPServiceConfig(config, &daemon.cfg.httpServerCfg.ServiceCfg); err == nil {
+				// задан ли в командной строке JSON web token secret key
+				if daemon.cfg.httpServerCfg.ServiceCfg.UseJWT && daemon.cfg.JwtKey == nil {
+					myerr := myerror.New("6023", "JSON web token secret key is null")
+					mylog.PrintfErrorInfo(myerr)
+					return nil, myerr
+				}
 
-			// Настраиваем конфигурацию HTTP Logger
-			if err = loadHTTPLoggerConfig(config, &daemon.cfg.httpServerCfg.ServiceCfg.LogCfg); err != nil {
+				// Настраиваем конфигурацию HTTP Logger
+				if err = loadHTTPLoggerConfig(config, &daemon.cfg.httpServerCfg.ServiceCfg.LogCfg); err != nil {
+					return nil, err
+				}
+			} else {
 				return nil, err
 			}
-		} else {
-			return nil, err
-		}
+		} // Настраиваем конфигурацию HTTP service
 
 		// Создаем HTTP server
 		if daemon.httpserver, err = httpserver.New(daemon.ctx, daemon.httpserverErrCh, &daemon.cfg.httpServerCfg); err != nil {

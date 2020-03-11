@@ -101,7 +101,7 @@ func main() {
 			// добавляем в имя лог файла дату и время
 			logFileFlag = strings.Replace(logFileFlag, "%s", time.Now().Format("2006_01_02_150405"), 1)
 
-			// Открываем лог файл на зпись
+			// открываем лог файл на запись
 			logFile, err := os.OpenFile(logFileFlag, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 			if err != nil {
 				myerr := myerror.WithCause("6020", "Error open log file: Filename", err, logFileFlag)
@@ -109,7 +109,7 @@ func main() {
 				return myerr
 			}
 
-			// закрываем по выходу из демона
+			// закрываем по выходу
 			if logFile != nil {
 				defer logFile.Close()
 			}

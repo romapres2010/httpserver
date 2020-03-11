@@ -1,0 +1,23 @@
+'2020.03.11 13:46:18-693804600' In Request '1' BEGIN ==================================================================== 
+POST /httplog HTTP/1.1
+Host: 127.0.0.1:3000
+Accept: */*
+Accept-Encoding: gzip, deflate, br
+Authorization: Basic cm9tYW46V2VsY29tZTE=
+Cache-Control: no-cache
+Connection: keep-alive
+Content-Length: 0
+Http-Log: true
+Http-Log-Type: INREQ | OUTREQ | INRESP | OUTRESP | BODY
+Postman-Token: dda52cba-31d1-4024-9f91-0ab4daee3c0d
+User-Agent: PostmanRuntime/7.22.0
+
+
+'2020.03.11 13:46:18-694802000' In Request '1' End ==================================================================== 
+'2020.03.11 13:46:18-695800800' Out Response '1' BEGIN ==================================================================== 
+HTTP 200 OK
+Errcode: 0
+RequestID: 1
+
+
+'2020.03.11 13:46:18-699790100' Out Response '1' End ==================================================================== 

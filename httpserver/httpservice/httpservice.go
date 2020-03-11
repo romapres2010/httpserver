@@ -10,6 +10,7 @@ import (
 
 	myerror "github.com/romapres2010/httpserver/error"
 	httplog "github.com/romapres2010/httpserver/httpserver/httplog"
+	myjwt "github.com/romapres2010/httpserver/jwt"
 	mylog "github.com/romapres2010/httpserver/log"
 )
 
@@ -33,7 +34,7 @@ var requestID uint64
 type Service struct {
 	сtx      context.Context    // корневой контекст при инициации сервиса
 	cancel   context.CancelFunc // функция закрытия глобального контекста
-	cfg      *Config            // Конфигурационные параметры
+	cfg      *Config            // конфигурационные параметры
 	Handlers Handlers           // список обработчиков
 
 	// вложенные сервисы
@@ -58,6 +59,7 @@ type Config struct {
 	HTTPErrorLogHeader bool   // логирование ошибок в заголовок HTTP ответа
 	HTTPErrorLogBody   bool   // логирование ошибок в тело HTTP ответа
 	HTTPLog            bool   // логирование HTTP трафика в файл
+	HTTPLogFileName    string // файл логирование HTTP трафика
 
 	// конфигурация вложенных сервисов
 	LogCfg httplog.Config // конфигурация HTTP логирования
@@ -79,15 +81,17 @@ func New(ctx context.Context, cfg *Config) (*Service, *httplog.Logger, error) {
 	}
 
 	// создаем обработчик для логирования HTTP
-	if service.logger, err = httplog.NewLogger(service.сtx, &cfg.LogCfg); err != nil {
+	if service.logger, err = httplog.New(service.сtx, &cfg.LogCfg, cfg.HTTPLogFileName); err != nil {
 		return nil, nil, err
 	}
 
 	// Наполним список обрабочиков
 	service.Handlers = map[string]Handler{
-		"/echo":    Handler{"/echo", service.RecoverWrap(service.EchoHandler), "POST"},
-		"/signin":  Handler{"/signin", service.RecoverWrap(service.SinginHandler), "POST"},
-		"/refresh": Handler{"/refresh", service.RecoverWrap(service.JWTRefreshHandler), "POST"},
+		"/echo":       Handler{"/echo", service.RecoverWrap(service.EchoHandler), "POST"},
+		"/signin":     Handler{"/signin", service.RecoverWrap(service.SinginHandler), "POST"},
+		"/refresh":    Handler{"/refresh", service.RecoverWrap(service.JWTRefreshHandler), "POST"},
+		"/httplog":    Handler{"/httplog", service.RecoverWrap(service.HTTPLogHandler), "POST"},
+		"/httperrlog": Handler{"/httperrlog", service.RecoverWrap(service.HTTPErrorLogHandler), "POST"},
 	}
 
 	return service, service.logger, nil
@@ -138,19 +142,18 @@ func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 
 // Process - represent server common task in process incoming HTTP request
 func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request, fn func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error)) error {
-	var err error
 	var myerr error
 
 	// Получить уникальный номер HTTP запроса
-	reqID := GetNextRequestID() // уникальный ID Request
+	reqID := GetNextRequestID()
 
-	// логируем входящий HTTP запрос
+	// Логируем входящий HTTP запрос
 	if s.logger != nil {
 		_ = s.logger.LogHTTPInRequest(s.сtx, r, reqID) // При сбое HTTP логирования, делаем системное логирование, но работу не останавливаем
 		mylog.PrintfDebugMsg("Logging HTTP in request: reqID", reqID)
 	}
 
-	// проверим разрешенный метод
+	// Проверим разрешенный метод
 	mylog.PrintfDebugMsg("Check allowed HTTP method: reqID, request.Method, method", reqID, r.Method, method)
 	if r.Method != method {
 		myerr = myerror.New("8000", "HTTP method is not allowed: reqID, request.Method, method", reqID, r.Method, method)
@@ -163,8 +166,21 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 	mylog.PrintfDebugMsg("Check authentication method: reqID, AuthType", reqID, s.cfg.AuthType)
 	if (s.cfg.AuthType == "INTERNAL" || s.cfg.AuthType == "MSAD") && !s.cfg.UseJWT {
 		mylog.PrintfDebugMsg("JWT is of. Need Authentication: reqID", reqID)
-		if _, myerr = s._checkBasicAuthentication(r); myerr != nil {
-			s.processError(myerr, w, http.StatusUnauthorized, reqID) // расширенное логирование ошибки в контексте HTTP
+
+		// Считаем из заголовка HTTP Basic Authentication
+		username, password, ok := r.BasicAuth()
+		if !ok {
+			myerr := myerror.New("8004", "Header 'Authorization' is not set")
+			mylog.PrintfErrorInfo(myerr)
+			s.processError(myerr, w, http.StatusUnauthorized, reqID)
+			return myerr
+		}
+		mylog.PrintfDebugMsg("Get Authorization header: username", username)
+
+		// Выполняем аутентификацию
+		if myerr = s.checkAuthentication(username, password); myerr != nil {
+			mylog.PrintfErrorInfo(myerr)
+			s.processError(myerr, w, http.StatusUnauthorized, reqID)
 			return myerr
 		}
 	}
@@ -172,7 +188,19 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 	// Если используем JWT - проверим токен
 	if s.cfg.UseJWT {
 		mylog.PrintfDebugMsg("JWT is on. Check JSON web token: reqID", reqID)
-		if _, myerr = s._checkJWTFromCookie(r); err != nil {
+
+		// Считаем token из requests cookies
+		cookie, err := r.Cookie("token")
+		if err != nil {
+			myerr := myerror.WithCause("8005", "JWT token does not present in Cookie. You have to authorize first.", err)
+			mylog.PrintfErrorInfo(myerr)
+			s.processError(myerr, w, http.StatusUnauthorized, reqID) // расширенное логирование ошибки в контексте HTTP
+			return myerr
+		}
+
+		// Проверим JWT в token
+		if myerr = myjwt.CheckJWTFromCookie(cookie, s.cfg.JwtKey); myerr != nil {
+			mylog.PrintfErrorInfo(myerr)
 			s.processError(myerr, w, http.StatusUnauthorized, reqID) // расширенное логирование ошибки в контексте HTTP
 			return myerr
 		}
@@ -193,6 +221,7 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 	mylog.PrintfDebugMsg("Calling external function handler: reqID, function", reqID, fn)
 	responseBuf, header, status, myerr := fn(requestBuf, reqID)
 	if myerr != nil {
+		mylog.PrintfErrorInfo(myerr)
 		s.processError(myerr, w, status, reqID) // расширенное логирование ошибки в контексте HTTP
 		return myerr
 	}
@@ -221,7 +250,7 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 	w.WriteHeader(status)
 
 	// Записываем тело ответа
-	if responseBuf != nil {
+	if responseBuf != nil && len(responseBuf) > 0 {
 		mylog.PrintfDebugMsg("Writing HTTP response body: reqID, len(body)", reqID, len(responseBuf))
 		respWrittenLen, err := w.Write(responseBuf)
 		if err != nil {
@@ -239,11 +268,11 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 // processError - log error into header and body
 func (s *Service) processError(err error, w http.ResponseWriter, status int, reqID uint64) {
 
-	// логируем в файл
+	// логируем в файл с полной трассировкой
 	mylog.PrintfErrorMsg(fmt.Sprintf("reqID:['%v'], %+v", reqID, err))
 
 	if w != nil && err != nil {
-		// Запишем базовые заголовик
+		// Запишем базовые заголовки
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		w.Header().Set("Request-ID", fmt.Sprintf("%v", reqID))
 
@@ -264,8 +293,7 @@ func (s *Service) processError(err error, w http.ResponseWriter, status int, req
 			}
 		}
 
-		// Запишем статус ответа
-		w.WriteHeader(status)
+		w.WriteHeader(status) // Запишем статус ответа
 
 		if s.cfg.HTTPErrorLogBody {
 			// Запишем ошибку в тело ответа

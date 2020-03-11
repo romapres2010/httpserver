@@ -37,7 +37,7 @@ func (e *Error) Format(s fmt.State, verb rune) {
 	switch verb {
 	case 'v':
 		fmt.Fprint(s, e.Error())
-		fmt.Fprintf(s, ", caller='%s'", e.Caller)
+		fmt.Fprintf(s, ", caller=[%s]", e.Caller)
 		if s.Flag('+') {
 			fmt.Fprintf(s, ", trace=%s", e.Trace)
 			return
@@ -51,12 +51,12 @@ func (e *Error) Format(s fmt.State, verb rune) {
 
 //Error print custom error
 func (e *Error) Error() string {
-	mes := fmt.Sprintf("ID=[%v], code=[%s], mes='%s'", e.ID, e.Code, e.Msg)
+	mes := fmt.Sprintf("ID=[%v], code=[%s], mes=[%s]", e.ID, e.Code, e.Msg)
 	if e.Args != "" {
-		mes = fmt.Sprintf("%s, args='%s'", mes, e.Args)
+		mes = fmt.Sprintf("%s, args=[%s]", mes, e.Args)
 	}
 	if e.CauseMsg != "" {
-		mes = fmt.Sprintf("%s, causemes='%s'", mes, e.CauseMsg)
+		mes = fmt.Sprintf("%s, causemes=[%s]", mes, e.CauseMsg)
 	}
 	return mes
 }

@@ -46,37 +46,37 @@ func loadConfigFile(fileName string) (*mini.Config, error) {
 }
 
 // loadHTTPServerConfig load HTTP server confiuration from file
-func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *httpserver.Config) error {
+func loadHTTPServerConfig(config *mini.Config, cfg *httpserver.Config) error {
 	var myerr error
 
 	{ // секция с основными параметрами HTTP сервера
 		sectionName := "HTTP_SERVER"
 
-		if HTTPServerCfg.ReadTimeout, myerr = loadIntFromSection(sectionName, config, "ReadTimeout", true, "60"); myerr != nil {
+		if cfg.ReadTimeout, myerr = loadIntFromSection(sectionName, config, "ReadTimeout", true, "60"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
-		if HTTPServerCfg.WriteTimeout, myerr = loadIntFromSection(sectionName, config, "WriteTimeout", true, "60"); myerr != nil {
+		if cfg.WriteTimeout, myerr = loadIntFromSection(sectionName, config, "WriteTimeout", true, "60"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
-		if HTTPServerCfg.IdleTimeout, myerr = loadIntFromSection(sectionName, config, "IdleTimeout", true, "60"); myerr != nil {
+		if cfg.IdleTimeout, myerr = loadIntFromSection(sectionName, config, "IdleTimeout", true, "60"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
-		if HTTPServerCfg.MaxHeaderBytes, myerr = loadIntFromSection(sectionName, config, "MaxHeaderBytes", true, "0"); myerr != nil {
+		if cfg.MaxHeaderBytes, myerr = loadIntFromSection(sectionName, config, "MaxHeaderBytes", true, "0"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
-		if HTTPServerCfg.MaxBodyBytes, myerr = loadIntFromSection(sectionName, config, "MaxBodyBytes", true, "0"); myerr != nil {
+		if cfg.MaxBodyBytes, myerr = loadIntFromSection(sectionName, config, "MaxBodyBytes", true, "0"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
-		if HTTPServerCfg.UseProfile, myerr = loadBoolFromSection(sectionName, config, "UseProfile", true, "false"); myerr != nil {
+		if cfg.UseProfile, myerr = loadBoolFromSection(sectionName, config, "UseProfile", true, "false"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
-		if HTTPServerCfg.ShutdownTimeout, myerr = loadIntFromSection(sectionName, config, "ShutdownTimeout", true, "30"); myerr != nil {
+		if cfg.ShutdownTimeout, myerr = loadIntFromSection(sectionName, config, "ShutdownTimeout", true, "30"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
@@ -85,37 +85,37 @@ func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *httpserver.Config)
 	{ // секция с настройками TLS
 		sectionName := "TLS"
 
-		if HTTPServerCfg.UseTLS, myerr = loadBoolFromSection(sectionName, config, "UseTLS", true, "false"); myerr != nil {
+		if cfg.UseTLS, myerr = loadBoolFromSection(sectionName, config, "UseTLS", true, "false"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 
-		if HTTPServerCfg.UseTLS {
+		if cfg.UseTLS {
 			{ // параметр TLSSertFile
-				if HTTPServerCfg.TLSSertFile, myerr = loadStringFromSection(sectionName, config, "TLSSertFile", true, ""); myerr != nil {
+				if cfg.TLSSertFile, myerr = loadStringFromSection(sectionName, config, "TLSSertFile", true, ""); myerr != nil {
 					mylog.PrintfErrorInfo(myerr)
 					return myerr
-				} else if HTTPServerCfg.TLSSertFile != "" {
+				} else if cfg.TLSSertFile != "" {
 					// Считать информацию о файле или каталоге
-					_, err := os.Stat(HTTPServerCfg.TLSSertFile)
+					_, err := os.Stat(cfg.TLSSertFile)
 					// Если файл не существует
 					if os.IsNotExist(err) {
-						myerr = myerror.New("5010", "Sertificate file does not exist: FileName", HTTPServerCfg.TLSSertFile)
+						myerr = myerror.New("5010", "Sertificate file does not exist: FileName", cfg.TLSSertFile)
 						mylog.PrintfErrorInfo(myerr)
 						return myerr
 					}
 				}
 			}
 			{ // параметр TLSKeyFile
-				if HTTPServerCfg.TLSKeyFile, myerr = loadStringFromSection(sectionName, config, "TLSKeyFile", true, ""); myerr != nil {
+				if cfg.TLSKeyFile, myerr = loadStringFromSection(sectionName, config, "TLSKeyFile", true, ""); myerr != nil {
 					mylog.PrintfErrorInfo(myerr)
 					return myerr
-				} else if HTTPServerCfg.TLSKeyFile != "" {
+				} else if cfg.TLSKeyFile != "" {
 					// Считать информацию о файле или каталоге
-					_, err := os.Stat(HTTPServerCfg.TLSKeyFile)
+					_, err := os.Stat(cfg.TLSKeyFile)
 					// Если файл не существует
 					if os.IsNotExist(err) {
-						myerr = myerror.New("5011", "Private key file does not exist: FileName", HTTPServerCfg.TLSKeyFile)
+						myerr = myerror.New("5011", "Private key file does not exist: FileName", cfg.TLSKeyFile)
 						mylog.PrintfErrorInfo(myerr)
 						return myerr
 					}
@@ -128,13 +128,13 @@ func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *httpserver.Config)
 				} else if _TLSMinVersion != "" {
 					switch _TLSMinVersion {
 					case "VersionTLS13":
-						HTTPServerCfg.TLSMinVersion = tls.VersionTLS13
+						cfg.TLSMinVersion = tls.VersionTLS13
 					case "VersionTLS12":
-						HTTPServerCfg.TLSMinVersion = tls.VersionTLS12
+						cfg.TLSMinVersion = tls.VersionTLS12
 					case "VersionTLS11":
-						HTTPServerCfg.TLSMinVersion = tls.VersionTLS11
+						cfg.TLSMinVersion = tls.VersionTLS11
 					case "VersionTLS10":
-						HTTPServerCfg.TLSMinVersion = tls.VersionTLS10
+						cfg.TLSMinVersion = tls.VersionTLS10
 					default:
 						myerr = myerror.New("5012", "Incorrect TLSMinVersion, only avaliable 'VersionTLS13', 'VersionTLS12', 'VersionTLS11', 'VersionTLS10', 'VersionSSL30'", _TLSMinVersion)
 						mylog.PrintfErrorInfo(myerr)
@@ -149,13 +149,13 @@ func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *httpserver.Config)
 				} else if _TLSMaxVersion != "" {
 					switch _TLSMaxVersion {
 					case "VersionTLS13":
-						HTTPServerCfg.TLSMaxVersion = tls.VersionTLS13
+						cfg.TLSMaxVersion = tls.VersionTLS13
 					case "VersionTLS12":
-						HTTPServerCfg.TLSMaxVersion = tls.VersionTLS12
+						cfg.TLSMaxVersion = tls.VersionTLS12
 					case "VersionTLS11":
-						HTTPServerCfg.TLSMaxVersion = tls.VersionTLS11
+						cfg.TLSMaxVersion = tls.VersionTLS11
 					case "VersionTLS10":
-						HTTPServerCfg.TLSMaxVersion = tls.VersionTLS10
+						cfg.TLSMaxVersion = tls.VersionTLS10
 					default:
 						myerr = myerror.New("5013", "Incorrect TLSMaxVersion, only avaliable 'VersionTLS13', 'VersionTLS12', 'VersionTLS11', 'VersionTLS10', 'VersionSSL30'", _TLSMaxVersion)
 						mylog.PrintfErrorInfo(myerr)
@@ -164,7 +164,7 @@ func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *httpserver.Config)
 				}
 			}
 			{ // параметр UseHSTS
-				if HTTPServerCfg.UseHSTS, myerr = loadBoolFromSection(sectionName, config, "UseHSTS", true, "false"); myerr != nil {
+				if cfg.UseHSTS, myerr = loadBoolFromSection(sectionName, config, "UseHSTS", true, "false"); myerr != nil {
 					mylog.PrintfErrorInfo(myerr)
 					return myerr
 				}
@@ -176,20 +176,20 @@ func loadHTTPServerConfig(config *mini.Config, HTTPServerCfg *httpserver.Config)
 	return nil
 }
 
-// loadHTTPHandlerConfig load HTTP handler confiuration from file
-func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *httpservice.Config) error {
+// loadHTTPServiceConfig load HTTP handler confiuration from file
+func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 	var myerr error
 
 	{ // секция JWT
 		sectionName := "JWT"
 
-		if HTTPHandlerCfg.UseJWT, myerr = loadBoolFromSection(sectionName, config, "UseJWT", true, "false"); myerr != nil {
+		if cfg.UseJWT, myerr = loadBoolFromSection(sectionName, config, "UseJWT", true, "false"); myerr != nil {
 			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 
-		if HTTPHandlerCfg.UseJWT {
-			if HTTPHandlerCfg.JWTExpiresAt, myerr = loadIntFromSection(sectionName, config, "JWTExpiresAt", true, "10000"); myerr != nil {
+		if cfg.UseJWT {
+			if cfg.JWTExpiresAt, myerr = loadIntFromSection(sectionName, config, "JWTExpiresAt", true, "10000"); myerr != nil {
 				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
@@ -206,11 +206,11 @@ func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *httpservice.Conf
 			} else if _AuthType != "" {
 				switch _AuthType {
 				case "NONE":
-					HTTPHandlerCfg.AuthType = "NONE"
+					cfg.AuthType = "NONE"
 				case "INTERNAL":
-					HTTPHandlerCfg.AuthType = "INTERNAL"
+					cfg.AuthType = "INTERNAL"
 				case "MSAD":
-					HTTPHandlerCfg.AuthType = "MSAD"
+					cfg.AuthType = "MSAD"
 				default:
 					myerr = myerror.New("5015", "Incorrect AuthType, only avaliable 'NONE', 'INTERNAL', 'MSAD'", _AuthType)
 					mylog.PrintfErrorInfo(myerr)
@@ -220,13 +220,13 @@ func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *httpservice.Conf
 		}
 
 		// Проверим, что для режима утентификации INTERNAL задан пользователь и пароль
-		if HTTPHandlerCfg.AuthType == "INTERNAL" {
-			if HTTPHandlerCfg.HTTPUserID == "" {
+		if cfg.AuthType == "INTERNAL" {
+			if cfg.HTTPUserID == "" {
 				myerr = myerror.New("6021", "User name for access to HTTP server is null")
 				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
-			if HTTPHandlerCfg.HTTPUserPwd == "" {
+			if cfg.HTTPUserPwd == "" {
 				myerr = myerror.New("6021", "User password for access to HTTP server is null")
 				mylog.PrintfErrorInfo(myerr)
 				return myerr
@@ -234,16 +234,16 @@ func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *httpservice.Conf
 		}
 
 		// Проверим, что для режима утентификации MSAD заданы параметры подключения
-		if HTTPHandlerCfg.AuthType == "MSAD" {
-			if HTTPHandlerCfg.MSADServer, myerr = loadStringFromSection(sectionName, config, "MSADServer", true, ""); myerr != nil {
+		if cfg.AuthType == "MSAD" {
+			if cfg.MSADServer, myerr = loadStringFromSection(sectionName, config, "MSADServer", true, ""); myerr != nil {
 				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
-			if HTTPHandlerCfg.MSADPort, myerr = loadIntFromSection(sectionName, config, "MSADPort", true, ""); myerr != nil {
+			if cfg.MSADPort, myerr = loadIntFromSection(sectionName, config, "MSADPort", true, ""); myerr != nil {
 				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
-			if HTTPHandlerCfg.MSADBaseDN, myerr = loadStringFromSection(sectionName, config, "MSADBaseDN", true, ""); myerr != nil {
+			if cfg.MSADBaseDN, myerr = loadStringFromSection(sectionName, config, "MSADBaseDN", true, ""); myerr != nil {
 				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
@@ -254,11 +254,11 @@ func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *httpservice.Conf
 			} else if _MSADSecurity != "" {
 				switch _MSADSecurity {
 				case "SecurityNone":
-					HTTPHandlerCfg.MSADSecurity = int(auth.SecurityNone)
+					cfg.MSADSecurity = int(auth.SecurityNone)
 				case "SecurityTLS":
-					HTTPHandlerCfg.MSADSecurity = int(auth.SecurityTLS)
+					cfg.MSADSecurity = int(auth.SecurityTLS)
 				case "SecurityStartTLS":
-					HTTPHandlerCfg.MSADSecurity = int(auth.SecurityStartTLS)
+					cfg.MSADSecurity = int(auth.SecurityStartTLS)
 				default:
 					myerr = myerror.New("5016", "Incorrect MSADSecurity, only avaliable 'SecurityNone', 'SecurityTLS', 'SecurityStartTLS'", _MSADSecurity)
 					mylog.PrintfErrorInfo(myerr)
@@ -272,9 +272,16 @@ func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *httpservice.Conf
 	{ // секция LOG
 		sectionName := "LOG"
 
-		if HTTPHandlerCfg.HTTPLog, myerr = loadBoolFromSection(sectionName, config, "HTTPLog", true, "false"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
-			return myerr
+		{
+			if cfg.HTTPLog, myerr = loadBoolFromSection(sectionName, config, "HTTPLog", true, "false"); myerr != nil {
+				mylog.PrintfErrorInfo(myerr)
+				return myerr
+			}
+
+			if cfg.HTTPLogFileName, myerr = loadStringFromSection(sectionName, config, "HTTPLogFileName", false, ""); myerr != nil {
+				mylog.PrintfErrorInfo(myerr)
+				return myerr
+			}
 		}
 
 		{
@@ -286,12 +293,12 @@ func loadHTTPHandlerConfig(config *mini.Config, HTTPHandlerCfg *httpservice.Conf
 
 			// логировать ошибки в заголовок ответа
 			if strings.Index(httpErrLoggerType, "HEADER") >= 0 {
-				HTTPHandlerCfg.HTTPErrorLogHeader = true
+				cfg.HTTPErrorLogHeader = true
 			}
 
 			// логировать ошибки в тело ответа
 			if strings.Index(httpErrLoggerType, "BODY") >= 0 {
-				HTTPHandlerCfg.HTTPErrorLogBody = true
+				cfg.HTTPErrorLogBody = true
 			}
 		}
 
@@ -342,14 +349,6 @@ func loadHTTPLoggerConfig(config *mini.Config, cfg *httplog.Config) error {
 			// логировать тело запроса
 			if strings.Index(httpLoggerType, "BODY") >= 0 {
 				cfg.LogBody = true
-			}
-
-			// Если логирование в файл
-			if httpLoggerType != "" {
-				if cfg.FileName, myerr = loadStringFromSection(sectionName, config, "HTTPLogFileName", true, ""); myerr != nil {
-					mylog.PrintfErrorInfo(myerr)
-					return myerr
-				}
 			}
 		}
 
