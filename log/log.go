@@ -29,8 +29,8 @@ func InitLogger(wrt io.Writer) {
 	log.SetOutput(logFilter)
 }
 
-//NewFilter set log level
-func NewFilter(lev string) {
+//SetFilter set log level
+func SetFilter(lev string) {
 	logFilter.SetMinLevel(logutils.LogLevel(lev))
 }
 

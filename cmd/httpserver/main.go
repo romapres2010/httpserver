@@ -129,8 +129,8 @@ func main() {
 		if debugFlag != "" {
 			mylog.PrintfInfoMsg("Set log level", debugFlag)
 			switch debugFlag {
-			case "DEBUG", "WARN", "ERROR", "INFO":
-				mylog.NewFilter(debugFlag)
+			case "DEBUG", "ERROR", "INFO":
+				mylog.SetFilter(debugFlag)
 			default:
 				myerr := myerror.New("9001", "Incorrect debugFlag. Only avaliable: DEBUG, INFO, ERROR.", debugFlag)
 				mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr))

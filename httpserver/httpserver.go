@@ -43,7 +43,7 @@ type Config struct {
 	UseProfile      bool   // use Go profiling
 	UseTLS          bool   // use Transport Level Security
 	UseHSTS         bool   // use HTTP Strict Transport Security
-	TLSSertFile     string // TLS Sertificate file name
+	TLSCertFile     string // TLS Certificate file name
 	TLSKeyFile      string // TLS Private key file name
 	TLSMinVersion   uint16 // TLS min version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
 	TLSMaxVersion   uint16 // TLS max version VersionTLS13, VersionTLS12, VersionTLS11, VersionTLS10, VersionSSL30
@@ -203,8 +203,8 @@ func (s *Server) Run() error {
 
 	// Запускаем HTTP сервер
 	if s.cfg.UseTLS {
-		mylog.PrintfInfoMsg("Starting HTTPS server: TLSSertFile, TLSKeyFile", s.cfg.TLSSertFile, s.cfg.TLSKeyFile)
-		return s.httpServer.ServeTLS(s.listener, s.cfg.TLSSertFile, s.cfg.TLSKeyFile)
+		mylog.PrintfInfoMsg("Starting HTTPS server: TLSSertFile, TLSKeyFile", s.cfg.TLSCertFile, s.cfg.TLSKeyFile)
+		return s.httpServer.ServeTLS(s.listener, s.cfg.TLSCertFile, s.cfg.TLSKeyFile)
 	}
 	mylog.PrintfInfoMsg(fmt.Sprintf("Starting HTTP server"))
 	return s.httpServer.Serve(s.listener)

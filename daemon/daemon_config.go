@@ -91,16 +91,16 @@ func loadHTTPServerConfig(config *mini.Config, cfg *httpserver.Config) error {
 		}
 
 		if cfg.UseTLS {
-			{ // параметр TLSSertFile
-				if cfg.TLSSertFile, myerr = loadStringFromSection(sectionName, config, "TLSSertFile", true, ""); myerr != nil {
+			{ // параметр TLSCertFile
+				if cfg.TLSCertFile, myerr = loadStringFromSection(sectionName, config, "TLSCertFile", true, ""); myerr != nil {
 					mylog.PrintfErrorInfo(myerr)
 					return myerr
-				} else if cfg.TLSSertFile != "" {
+				} else if cfg.TLSCertFile != "" {
 					// Считать информацию о файле или каталоге
-					_, err := os.Stat(cfg.TLSSertFile)
+					_, err := os.Stat(cfg.TLSCertFile)
 					// Если файл не существует
 					if os.IsNotExist(err) {
-						myerr = myerror.New("5010", "Sertificate file does not exist: FileName", cfg.TLSSertFile)
+						myerr = myerror.New("5010", "Sertificate file does not exist: FileName", cfg.TLSCertFile)
 						mylog.PrintfErrorInfo(myerr)
 						return myerr
 					}

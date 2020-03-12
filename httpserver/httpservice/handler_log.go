@@ -114,3 +114,35 @@ func (s *Service) HTTPErrorLogHandler(w http.ResponseWriter, r *http.Request) {
 
 	mylog.PrintfDebugMsg("SUCCESS ==================================================================================")
 }
+
+// LogLevelHandler handle loging filter
+func (s *Service) LogLevelHandler(w http.ResponseWriter, r *http.Request) {
+	mylog.PrintfDebugMsg("START   ==================================================================================")
+
+	// Запускаем обработчик, возврат ошибки игнорируем
+	_ = s.Process("POST", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
+		mylog.PrintfDebugMsg("START: reqID", reqID)
+
+		LogLevelStr := r.Header.Get("Log-Level-Filter")
+		switch LogLevelStr {
+		case "DEBUG", "ERROR", "INFO":
+			mylog.SetFilter(LogLevelStr)
+		default:
+			myerr := myerror.New("9001", "Incorrect log level. Only avaliable: DEBUG, INFO, ERROR.", LogLevelStr)
+			mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr))
+			return nil, nil, http.StatusBadRequest, myerr
+		}
+
+		mylog.PrintfInfoMsg("Set log level", s.cfg.HTTPErrorLogHeader, s.cfg.HTTPErrorLogBody)
+
+		// формируем ответ
+		header := Header{}
+		header["Errcode"] = "0"
+		header["RequestID"] = fmt.Sprintf("%v", reqID)
+
+		mylog.PrintfDebugMsg("SUCCESS", reqID)
+		return requestBuf, header, http.StatusOK, nil
+	})
+
+	mylog.PrintfDebugMsg("SUCCESS ==================================================================================")
+}

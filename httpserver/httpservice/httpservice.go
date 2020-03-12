@@ -92,6 +92,7 @@ func New(ctx context.Context, cfg *Config) (*Service, *httplog.Logger, error) {
 		"/refresh":    Handler{"/refresh", service.RecoverWrap(service.JWTRefreshHandler), "POST"},
 		"/httplog":    Handler{"/httplog", service.RecoverWrap(service.HTTPLogHandler), "POST"},
 		"/httperrlog": Handler{"/httperrlog", service.RecoverWrap(service.HTTPErrorLogHandler), "POST"},
+		"/loglevel":   Handler{"/loglevel", service.RecoverWrap(service.LogLevelHandler), "POST"},
 	}
 
 	return service, service.logger, nil
