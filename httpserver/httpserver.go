@@ -211,8 +211,11 @@ func (s *Server) Run() error {
 }
 
 // Shutdown HTTP server
-func (s *Server) Shutdown() error {
+func (s *Server) Shutdown() (myerr error) {
 	mylog.PrintfInfoMsg("Waiting for shutdown HTTP Server: sec", s.cfg.ShutdownTimeout)
+
+	// закроем контекст HTTP сервера
+	defer s.cancel()
 
 	// создаем новый контекст с отменой и отсрочкой ShutdownTimeout
 	cancelCtx, cancel := context.WithTimeout(s.ctx, time.Duration(s.cfg.ShutdownTimeout*int(time.Second)))
@@ -220,18 +223,22 @@ func (s *Server) Shutdown() error {
 
 	// ожидаем закрытия активных подключений в течении ShutdownTimeout
 	if err := s.httpServer.Shutdown(cancelCtx); err != nil {
-		myerr := myerror.WithCause("8003", "Failed to shutdown HTTP server: sec", err, s.cfg.ShutdownTimeout)
+		myerr = myerror.WithCause("8003", "Failed to shutdown HTTP server: sec", err, s.cfg.ShutdownTimeout)
 		mylog.PrintfErrorInfo(myerr)
-		return myerr
+
+		// Останавливаем служебные сервисы, их ошибку игнорируем
+		_ = s.httpService.Shutdown()
+
+		return
 	}
 
 	// Останавливаем служебные сервисы
-	s.httpService.Shutdown()
+	myerr = s.httpService.Shutdown()
 
 	mylog.PrintfInfoMsg("HTTP Server shutdown successfuly")
 
 	// подтверждение об успешном закрытии HTTP сервера
 	s.stopCh <- struct{}{}
 
-	return nil
+	return
 }

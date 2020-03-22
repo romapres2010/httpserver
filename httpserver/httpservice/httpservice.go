@@ -104,12 +104,14 @@ func GetNextRequestID() uint64 {
 }
 
 // Shutdown shutting down service
-func (s *Service) Shutdown() {
+func (s *Service) Shutdown() (myerr error) {
+	defer s.cancel() // закрываем контекст
+
 	// Закрываем Logger для корректного закрытия лог файла
 	if s.logger != nil {
-		s.logger.Close()
+		myerr = s.logger.Close()
 	}
-	defer s.cancel() // вызываем функцию закрытия контекста
+	return
 }
 
 // RecoverWrap cover handler functions with panic recoverer

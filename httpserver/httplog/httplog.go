@@ -68,10 +68,20 @@ func (log *Logger) SetConfig(cfg *Config) {
 }
 
 // Close Logger
-func (log *Logger) Close() {
+func (log *Logger) Close() error {
 	if log.file != nil {
-		_ = log.file.Close()
+		defer log.file.Close() // ошибку закрытия игнорируем
+
+		// flushing write buffers out to disks
+		err := log.file.Sync()
+
+		if err != nil {
+			myerr := myerror.WithCause("6020", "Error sync HTTP log file before closing", err)
+			mylog.PrintfErrorInfo(myerr)
+			return myerr
+		}
 	}
+	return nil
 }
 
 // LogHTTPOutRequest process HTTP logging for Out request

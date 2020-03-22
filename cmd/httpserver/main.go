@@ -94,7 +94,7 @@ func main() {
 	app.Writer = os.Stderr
 
 	// Определяем действие - запуск демона
-	app.Action = func(ctx *cli.Context) error {
+	app.Action = func(ctx *cli.Context) (myerr error) {
 
 		// настраиваем параллельное логирование в файл
 		if logFileFlag != "" {
@@ -104,15 +104,28 @@ func main() {
 			// открываем лог файл на запись
 			logFile, err := os.OpenFile(logFileFlag, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 			if err != nil {
-				myerr := myerror.WithCause("6020", "Error open log file: Filename", err, logFileFlag)
+				myerr = myerror.WithCause("6020", "Error open log file: Filename", err, logFileFlag)
 				mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr))
-				return myerr
+				return
 			}
 
-			// закрываем по выходу
-			if logFile != nil {
-				defer logFile.Close()
-			}
+			// закрываем лог файл по выходу
+			defer func() {
+				if logFile != nil {
+
+					defer logFile.Close() // ошибку закрытия игнорируем
+
+					// flushing write buffers out to disks
+					err := logFile.Sync()
+
+					if err != nil {
+						// ошибку через закрытие передаем на уровень выше
+						myerr = myerror.WithCause("6020", "Error sync log file before closing", err)
+						mylog.PrintfErrorInfo(myerr)
+						return
+					}
+				}
+			}()
 
 			// Параллельно пишем в os.Stderr и файл
 			wrt := io.MultiWriter(os.Stderr, logFile)
@@ -132,9 +145,9 @@ func main() {
 			case "DEBUG", "ERROR", "INFO":
 				mylog.SetFilter(debugFlag)
 			default:
-				myerr := myerror.New("9001", "Incorrect debugFlag. Only avaliable: DEBUG, INFO, ERROR.", debugFlag)
+				myerr = myerror.New("9001", "Incorrect debugFlag. Only avaliable: DEBUG, INFO, ERROR.", debugFlag)
 				mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr))
-				return myerr
+				return
 			}
 		}
 
@@ -151,17 +164,17 @@ func main() {
 		daemon, myerr := daemon.New(context.Background(), daemonCfg)
 		if myerr != nil {
 			mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr)) // верхний уровень логирования с трассировкой
-			return myerr
+			return
 		}
 
 		// Стартуем демон и ожидаем завершения
 		if myerr = daemon.Run(); myerr != nil {
 			mylog.PrintfErrorMsg(fmt.Sprintf("%+v", myerr)) // верхний уровень логирования с трассировкой
-			return myerr
+			return
 		}
 
 		mylog.PrintfInfoMsg("Server is shutdown")
-		return nil
+		return
 	}
 
 	// Запускаем приложение
