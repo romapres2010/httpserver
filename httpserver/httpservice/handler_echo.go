@@ -1,9 +1,11 @@
 package httpservice
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
+	myctx "github.com/romapres2010/httpserver/ctx"
 	mylog "github.com/romapres2010/httpserver/log"
 )
 
@@ -12,7 +14,9 @@ func (s *Service) EchoHandler(w http.ResponseWriter, r *http.Request) {
 	mylog.PrintfDebugMsg("START   ==================================================================================")
 
 	// Запускаем обработчик, возврат ошибки игнорируем
-	_ = s.Process("POST", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
+	_ = s.process("POST", w, r, func(ctx context.Context, requestBuf []byte, buf []byte) ([]byte, Header, int, error) {
+		reqID := myctx.FromContextRequestID(ctx) // RequestID передается через context
+
 		mylog.PrintfDebugMsg("START: reqID", reqID)
 
 		// формируем ответ
@@ -20,12 +24,14 @@ func (s *Service) EchoHandler(w http.ResponseWriter, r *http.Request) {
 		header["Errcode"] = "0"
 		header["RequestID"] = fmt.Sprintf("%v", reqID)
 
-		// Считаем параметры из заголовка сообщения
+		// Считаем параметры из заголовка сообщения и перенесем их в ответный заголовок
 		for key := range r.Header {
 			header[key] = r.Header.Get(key)
 		}
 
 		mylog.PrintfDebugMsg("SUCCESS", reqID)
+
+		// входной буфер возвращаем в качестве выходного
 		return requestBuf, header, http.StatusOK, nil
 	})
 

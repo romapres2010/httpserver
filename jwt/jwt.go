@@ -31,18 +31,12 @@ func CheckJWT(tknStr string, jwtKey []byte) (*Claims, error) {
 	})
 	if err != nil {
 		if err == jwt.ErrSignatureInvalid {
-			myerr := myerror.WithCause("8007", "JWT token signature is invalid", err)
-			mylog.PrintfErrorInfo(myerr)
-			return nil, myerr
+			return nil, myerror.WithCause("8007", "JWT token signature is invalid", err).PrintfInfo()
 		}
-		myerr := myerror.WithCause("8008", "JWT token expired or invalid. You have to authorize.", err)
-		mylog.PrintfErrorInfo(myerr)
-		return nil, myerr
+		return nil, myerror.WithCause("8008", "JWT token expired or invalid. You have to authorize.", err).PrintfInfo()
 	}
 	if !tkn.Valid {
-		myerr := myerror.New("8009", "JWT token expired or invalid. You have to authorize.")
-		mylog.PrintfErrorInfo(myerr)
-		return nil, myerr
+		return nil, myerror.New("8009", "JWT token expired or invalid. You have to authorize.").PrintfInfo()
 	}
 
 	return claims, nil

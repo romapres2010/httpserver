@@ -11,35 +11,28 @@ import (
 	"github.com/romapres2010/httpserver/httpserver/httplog"
 	"github.com/romapres2010/httpserver/httpserver/httpservice"
 	mylog "github.com/romapres2010/httpserver/log"
+	"github.com/romapres2010/httpserver/postgres"
 	"github.com/sasbury/mini"
 	auth "gopkg.in/korylprince/go-ad-auth.v2"
 )
 
 // loadConfigFile load confiuration file
 func loadConfigFile(fileName string) (*mini.Config, error) {
-	var myerr error
-
 	if fileName == "" {
-		myerr = myerror.New("6013", "Config file is null")
-		mylog.PrintfErrorInfo(myerr)
-		return nil, myerr
+		return nil, myerror.New("6013", "Config file is null").PrintfInfo()
 	}
 	mylog.PrintfInfoMsg("Loading HTTP Server config from file: FileName", fileName)
 
 	// Считать информацию о файле
 	_, err := os.Stat(fileName)
 	if os.IsNotExist(err) {
-		myerr = myerror.New("5003", "Config file does not exist: FileName", fileName)
-		mylog.PrintfErrorInfo(myerr)
-		return nil, myerr
+		return nil, myerror.New("5003", "Config file does not exist: FileName", fileName).PrintfInfo()
 	}
 
 	// Считать конфигурацию из файла
 	config, err := mini.LoadConfiguration(fileName)
 	if err != nil {
-		myerr = myerror.WithCause("5004", "Error load config file: FileName", err, fileName)
-		mylog.PrintfErrorInfo(myerr)
-		return nil, myerr
+		return nil, myerror.WithCause("5004", "Error load config file: FileName", err, fileName).PrintfInfo()
 	}
 
 	return config, nil
@@ -53,31 +46,24 @@ func loadHTTPServerConfig(config *mini.Config, cfg *httpserver.Config) error {
 		sectionName := "HTTP_SERVER"
 
 		if cfg.ReadTimeout, myerr = loadIntFromSection(sectionName, config, "ReadTimeout", true, "60"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 		if cfg.WriteTimeout, myerr = loadIntFromSection(sectionName, config, "WriteTimeout", true, "60"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 		if cfg.IdleTimeout, myerr = loadIntFromSection(sectionName, config, "IdleTimeout", true, "60"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 		if cfg.MaxHeaderBytes, myerr = loadIntFromSection(sectionName, config, "MaxHeaderBytes", true, "0"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 		if cfg.MaxBodyBytes, myerr = loadIntFromSection(sectionName, config, "MaxBodyBytes", true, "0"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 		if cfg.UseProfile, myerr = loadBoolFromSection(sectionName, config, "UseProfile", true, "false"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 		if cfg.ShutdownTimeout, myerr = loadIntFromSection(sectionName, config, "ShutdownTimeout", true, "30"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 	} // секция с основными параметрами HTTP сервера
@@ -86,44 +72,36 @@ func loadHTTPServerConfig(config *mini.Config, cfg *httpserver.Config) error {
 		sectionName := "TLS"
 
 		if cfg.UseTLS, myerr = loadBoolFromSection(sectionName, config, "UseTLS", true, "false"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 
 		if cfg.UseTLS {
 			{ // параметр TLSCertFile
 				if cfg.TLSCertFile, myerr = loadStringFromSection(sectionName, config, "TLSCertFile", true, ""); myerr != nil {
-					mylog.PrintfErrorInfo(myerr)
 					return myerr
 				} else if cfg.TLSCertFile != "" {
 					// Считать информацию о файле или каталоге
 					_, err := os.Stat(cfg.TLSCertFile)
 					// Если файл не существует
 					if os.IsNotExist(err) {
-						myerr = myerror.New("5010", "Sertificate file does not exist: FileName", cfg.TLSCertFile)
-						mylog.PrintfErrorInfo(myerr)
-						return myerr
+						return myerror.New("5010", "Sertificate file does not exist: FileName", cfg.TLSCertFile).PrintfInfo()
 					}
 				}
 			}
 			{ // параметр TLSKeyFile
 				if cfg.TLSKeyFile, myerr = loadStringFromSection(sectionName, config, "TLSKeyFile", true, ""); myerr != nil {
-					mylog.PrintfErrorInfo(myerr)
 					return myerr
 				} else if cfg.TLSKeyFile != "" {
 					// Считать информацию о файле или каталоге
 					_, err := os.Stat(cfg.TLSKeyFile)
 					// Если файл не существует
 					if os.IsNotExist(err) {
-						myerr = myerror.New("5011", "Private key file does not exist: FileName", cfg.TLSKeyFile)
-						mylog.PrintfErrorInfo(myerr)
-						return myerr
+						return myerror.New("5011", "Private key file does not exist: FileName", cfg.TLSKeyFile).PrintfInfo()
 					}
 				}
 			}
 			{ // параметр TLSMinVersion
 				if _TLSMinVersion, myerr := loadStringFromSection(sectionName, config, "TLSMinVersion", true, "VersionSSL30"); myerr != nil {
-					mylog.PrintfErrorInfo(myerr)
 					return myerr
 				} else if _TLSMinVersion != "" {
 					switch _TLSMinVersion {
@@ -136,15 +114,12 @@ func loadHTTPServerConfig(config *mini.Config, cfg *httpserver.Config) error {
 					case "VersionTLS10":
 						cfg.TLSMinVersion = tls.VersionTLS10
 					default:
-						myerr = myerror.New("5012", "Incorrect TLSMinVersion, only avaliable 'VersionTLS13', 'VersionTLS12', 'VersionTLS11', 'VersionTLS10', 'VersionSSL30'", _TLSMinVersion)
-						mylog.PrintfErrorInfo(myerr)
-						return myerr
+						return myerror.New("5012", "Incorrect TLSMinVersion, only avaliable 'VersionTLS13', 'VersionTLS12', 'VersionTLS11', 'VersionTLS10', 'VersionSSL30'", _TLSMinVersion).PrintfInfo()
 					}
 				}
 			}
 			{ // параметр TLSMaxVersion
 				if _TLSMaxVersion, myerr := loadStringFromSection(sectionName, config, "TLSMaxVersion", true, "VersionTLS13"); myerr != nil {
-					mylog.PrintfErrorInfo(myerr)
 					return myerr
 				} else if _TLSMaxVersion != "" {
 					switch _TLSMaxVersion {
@@ -157,15 +132,12 @@ func loadHTTPServerConfig(config *mini.Config, cfg *httpserver.Config) error {
 					case "VersionTLS10":
 						cfg.TLSMaxVersion = tls.VersionTLS10
 					default:
-						myerr = myerror.New("5013", "Incorrect TLSMaxVersion, only avaliable 'VersionTLS13', 'VersionTLS12', 'VersionTLS11', 'VersionTLS10', 'VersionSSL30'", _TLSMaxVersion)
-						mylog.PrintfErrorInfo(myerr)
-						return myerr
+						return myerror.New("5013", "Incorrect TLSMaxVersion, only avaliable 'VersionTLS13', 'VersionTLS12', 'VersionTLS11', 'VersionTLS10', 'VersionSSL30'", _TLSMaxVersion).PrintfInfo()
 					}
 				}
 			}
 			{ // параметр UseHSTS
 				if cfg.UseHSTS, myerr = loadBoolFromSection(sectionName, config, "UseHSTS", true, "false"); myerr != nil {
-					mylog.PrintfErrorInfo(myerr)
 					return myerr
 				}
 			}
@@ -184,13 +156,11 @@ func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 		sectionName := "JWT"
 
 		if cfg.UseJWT, myerr = loadBoolFromSection(sectionName, config, "UseJWT", true, "false"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 
 		if cfg.UseJWT {
 			if cfg.JWTExpiresAt, myerr = loadIntFromSection(sectionName, config, "JWTExpiresAt", true, "10000"); myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
 		}
@@ -201,7 +171,6 @@ func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 
 		{ // параметр AuthType
 			if _AuthType, myerr := loadStringFromSection(sectionName, config, "AuthType", true, "NONE"); myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			} else if _AuthType != "" {
 				switch _AuthType {
@@ -212,9 +181,7 @@ func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 				case "MSAD":
 					cfg.AuthType = "MSAD"
 				default:
-					myerr = myerror.New("5015", "Incorrect AuthType, only avaliable 'NONE', 'INTERNAL', 'MSAD'", _AuthType)
-					mylog.PrintfErrorInfo(myerr)
-					return myerr
+					return myerror.New("5015", "Incorrect AuthType, only avaliable 'NONE', 'INTERNAL', 'MSAD'", _AuthType).PrintfInfo()
 				}
 			}
 		}
@@ -222,34 +189,26 @@ func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 		// Проверим, что для режима утентификации INTERNAL задан пользователь и пароль
 		if cfg.AuthType == "INTERNAL" {
 			if cfg.HTTPUserID == "" {
-				myerr = myerror.New("6021", "User name for access to HTTP server is null")
-				mylog.PrintfErrorInfo(myerr)
-				return myerr
+				return myerror.New("6021", "User name for access to HTTP server is null").PrintfInfo()
 			}
 			if cfg.HTTPUserPwd == "" {
-				myerr = myerror.New("6021", "User password for access to HTTP server is null")
-				mylog.PrintfErrorInfo(myerr)
-				return myerr
+				return myerror.New("6021", "User password for access to HTTP server is null").PrintfInfo()
 			}
 		}
 
 		// Проверим, что для режима утентификации MSAD заданы параметры подключения
 		if cfg.AuthType == "MSAD" {
 			if cfg.MSADServer, myerr = loadStringFromSection(sectionName, config, "MSADServer", true, ""); myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
 			if cfg.MSADPort, myerr = loadIntFromSection(sectionName, config, "MSADPort", true, ""); myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
 			if cfg.MSADBaseDN, myerr = loadStringFromSection(sectionName, config, "MSADBaseDN", true, ""); myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
 
 			if _MSADSecurity, myerr := loadStringFromSection(sectionName, config, "MSADSecurity", true, "NONE"); myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			} else if _MSADSecurity != "" {
 				switch _MSADSecurity {
@@ -260,9 +219,7 @@ func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 				case "SecurityStartTLS":
 					cfg.MSADSecurity = int(auth.SecurityStartTLS)
 				default:
-					myerr = myerror.New("5016", "Incorrect MSADSecurity, only avaliable 'SecurityNone', 'SecurityTLS', 'SecurityStartTLS'", _MSADSecurity)
-					mylog.PrintfErrorInfo(myerr)
-					return myerr
+					return myerror.New("5016", "Incorrect MSADSecurity, only avaliable 'SecurityNone', 'SecurityTLS', 'SecurityStartTLS'", _MSADSecurity).PrintfInfo()
 				}
 			}
 		}
@@ -274,12 +231,10 @@ func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 
 		{
 			if cfg.HTTPLog, myerr = loadBoolFromSection(sectionName, config, "HTTPLog", true, "false"); myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
 
 			if cfg.HTTPLogFileName, myerr = loadStringFromSection(sectionName, config, "HTTPLogFileName", false, ""); myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
 		}
@@ -287,7 +242,6 @@ func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 		{
 			httpErrLoggerType, myerr := loadStringFromSection(sectionName, config, "HTTPErrLog", false, "")
 			if myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
 
@@ -304,6 +258,23 @@ func loadHTTPServiceConfig(config *mini.Config, cfg *httpservice.Config) error {
 
 	} // секция LOG
 
+	{ // секция HTTP_POOL
+		sectionName := "HTTP_POOL"
+
+		if cfg.UseBufPool, myerr = loadBoolFromSection(sectionName, config, "UseBufPool", true, "false"); myerr != nil {
+			return myerr
+		}
+
+		if cfg.UseBufPool {
+			if cfg.BufPooledSize, myerr = loadIntFromSection(sectionName, config, "BufPooledSize", true, "512"); myerr != nil {
+				return myerr
+			}
+			if cfg.BufPooledMaxSize, myerr = loadIntFromSection(sectionName, config, "BufPooledMaxSize", true, "32768"); myerr != nil {
+				return myerr
+			}
+		}
+	} // секция HTTP_POOL
+
 	return nil
 }
 
@@ -315,14 +286,12 @@ func loadHTTPLoggerConfig(config *mini.Config, cfg *httplog.Config) error {
 		sectionName := "LOG"
 
 		if cfg.Enable, myerr = loadBoolFromSection(sectionName, config, "HTTPLog", true, "false"); myerr != nil {
-			mylog.PrintfErrorInfo(myerr)
 			return myerr
 		}
 
 		if cfg.Enable {
 			httpLoggerType, myerr := loadStringFromSection(sectionName, config, "HTTPLogType", true, "")
 			if myerr != nil {
-				mylog.PrintfErrorInfo(myerr)
 				return myerr
 			}
 
@@ -357,28 +326,73 @@ func loadHTTPLoggerConfig(config *mini.Config, cfg *httplog.Config) error {
 	return nil
 }
 
+// loadPqServiceConfig load PostgreSQL confiuration from file
+func loadPqServiceConfig(config *mini.Config, cfg *postgres.Config) error {
+	var myerr error
+
+	{ // секция POSTGRESQL
+		sectionName := "POSTGRESQL"
+
+		if cfg.PqHost, myerr = loadStringFromSection(sectionName, config, "PqHost", true, ""); myerr != nil {
+			return myerr
+		}
+		if cfg.PqPort, myerr = loadStringFromSection(sectionName, config, "PqPort", true, ""); myerr != nil {
+			return myerr
+		}
+
+		if cfg.PqDbname, myerr = loadStringFromSection(sectionName, config, "PqDbname", true, ""); myerr != nil {
+			return myerr
+		}
+
+		if cfg.PqSslMode, myerr = loadStringFromSection(sectionName, config, "PqSslMode", true, ""); myerr != nil {
+			return myerr
+		}
+
+		if cfg.PqUser, myerr = loadStringFromSection(sectionName, config, "PqUser", true, ""); myerr != nil {
+			return myerr
+		}
+
+		if cfg.PqPass, myerr = loadStringFromSection(sectionName, config, "PqPass", true, ""); myerr != nil {
+			return myerr
+		}
+
+		if cfg.PqDriverName, myerr = loadStringFromSection(sectionName, config, "PqDriverName", true, "pgx"); myerr != nil {
+			return myerr
+		}
+
+		if cfg.PqConnMaxLifetime, myerr = loadIntFromSection(sectionName, config, "PqConnMaxLifetime", true, "10000"); myerr != nil {
+			return myerr
+		}
+
+		if cfg.PqMaxOpenConns, myerr = loadIntFromSection(sectionName, config, "PqMaxOpenConns", true, "16"); myerr != nil {
+			return myerr
+		}
+
+		if cfg.PqMaxIdleConns, myerr = loadIntFromSection(sectionName, config, "PqMaxIdleConns", true, "4"); myerr != nil {
+			return myerr
+		}
+
+	} // секция POSTGRESQL
+
+	return nil
+}
+
 // loadIntFromSection load int paparameter and log err
 func loadIntFromSection(sectionName string, pgcfg *mini.Config, name string, manadatory bool, defval string) (int, error) {
 	strVal := pgcfg.StringFromSection(sectionName, name, defval)
 	if manadatory && defval == "" && strVal == "" {
-		myerr := myerror.New("5007", "Missing mandatory: Section, Parameter", sectionName, name)
-		//mylog.PrintfErrorInfo(myerr)
-		return 0, myerr
+		return 0, myerror.New("5007", "Missing mandatory: Section, Parameter", sectionName, name).PrintfInfo(1)
 	}
 	intVal, err := strconv.Atoi(strVal)
 	if err != nil {
-		myerr := myerror.WithCause("5005", "Incorrect integer: Section, Parameter, Value", err, sectionName, name, strVal)
-		//mylog.PrintfErrorInfo(myerr)
-		return 0, myerr
+		return 0, myerror.WithCause("5005", "Incorrect integer: Section, Parameter, Value", err, sectionName, name, strVal).PrintfInfo(1)
 	}
 	// только положительные параметры
 	if intVal < 0 {
-		myerr := myerror.New("5005", "Negative integer is not allowed: Section, Parameter, Value", sectionName, name, strVal)
-		//mylog.PrintfErrorInfo(myerr)
-		return 0, myerr
+		return 0, myerror.New("5005", "Negative integer is not allowed: Section, Parameter, Value", sectionName, name, strVal).PrintfInfo(1)
 	}
 
-	mylog.PrintfInfoMsg("Load config parameter: Section, Parameter, Value", sectionName, name, intVal)
+	mylog.PrintfInfoMsgDepth("Load config parameter: Section, Parameter, Value", 1, sectionName, name, intVal)
 
 	return intVal, nil
 }
@@ -387,11 +401,9 @@ func loadIntFromSection(sectionName string, pgcfg *mini.Config, name string, man
 func loadStringFromSection(sectionName string, pgcfg *mini.Config, name string, manadatory bool, defval string) (string, error) {
 	strVal := pgcfg.StringFromSection(sectionName, name, defval)
 	if manadatory && defval == "" && strVal == "" {
-		myerr := myerror.New("5007", "Missing mandatory: Section, Parameter", sectionName, name)
-		//mylog.PrintfErrorInfo(myerr)
-		return "", myerr
+		return "", myerror.New("5007", "Missing mandatory: Section, Parameter", sectionName, name).PrintfInfo(1)
 	}
-	mylog.PrintfInfoMsg("Load config parameter: Section, Parameter, Value", sectionName, name, strVal)
+	mylog.PrintfInfoMsgDepth("Load config parameter: Section, Parameter, Value", 1, sectionName, name, strVal)
 
 	return strVal, nil
 }
@@ -401,9 +413,7 @@ func loadBoolFromSection(sectionName string, pgcfg *mini.Config, name string, ma
 	var boolVal bool
 	strVal := pgcfg.StringFromSection(sectionName, name, defval)
 	if manadatory && defval == "" && strVal == "" {
-		myerr := myerror.New("5007", "Missing mandatory: Section, Parameter", sectionName, name)
-		//mylog.PrintfErrorInfo(myerr)
-		return false, myerr
+		return false, myerror.New("5007", "Missing mandatory: Section, Parameter", sectionName, name).PrintfInfo(1)
 	}
 
 	if strVal != "" {
@@ -413,13 +423,11 @@ func loadBoolFromSection(sectionName string, pgcfg *mini.Config, name string, ma
 		case "false":
 			boolVal = false
 		default:
-			myerr := myerror.New("5014", "Incorrect boolean, оnly avaliable: 'true', 'false': Section, Parameter, Value", sectionName, name, strVal)
-			//mylog.PrintfErrorInfo(myerr)
-			return false, myerr
+			return false, myerror.New("5014", "Incorrect boolean, оnly avaliable: 'true', 'false': Section, Parameter, Value", sectionName, name, strVal).PrintfInfo(1)
 		}
 	}
 
-	mylog.PrintfInfoMsg("Load config parameter: Section, Parameter, Value", sectionName, name, boolVal)
+	mylog.PrintfInfoMsgDepth("Load config parameter: Section, Parameter, Value", 1, sectionName, name, boolVal)
 
 	return boolVal, nil
 }

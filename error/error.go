@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 
 	pkgerr "github.com/pkg/errors"
+	mylog "github.com/romapres2010/httpserver/log"
 )
 
 var errorID uint64 // уникальный номер ошибки
@@ -51,7 +52,7 @@ func (e *Error) Format(s fmt.State, verb rune) {
 
 //Error print custom error
 func (e *Error) Error() string {
-	mes := fmt.Sprintf("ID=[%v], code=[%s], mes=[%s]", e.ID, e.Code, e.Msg)
+	mes := fmt.Sprintf("ErrID=[%v], code=[%s], mes=[%s]", e.ID, e.Code, e.Msg)
 	if e.Args != "" {
 		mes = fmt.Sprintf("%s, args=[%s]", mes, e.Args)
 	}
@@ -61,8 +62,18 @@ func (e *Error) Error() string {
 	return mes
 }
 
+//PrintfInfo print custom error
+func (e *Error) PrintfInfo(depths ...int) *Error {
+	depth := 1
+	if len(depths) == 1 {
+		depth = depth + depths[0]
+	}
+	mylog.PrintfMsg("[INFO]", depth, e.Error())
+	return e
+}
+
 // New - create new custom error
-func New(code string, msg string, args ...interface{}) error {
+func New(code string, msg string, args ...interface{}) *Error {
 	err := Error{
 		ID:     getNextErrorID(),
 		Code:   code,
@@ -76,7 +87,7 @@ func New(code string, msg string, args ...interface{}) error {
 }
 
 // WithCause - create new custom error with cause
-func WithCause(code string, msg string, causeErr error, args ...interface{}) error {
+func WithCause(code string, msg string, causeErr error, args ...interface{}) *Error {
 	err := Error{
 		ID:       getNextErrorID(),
 		Code:     code,

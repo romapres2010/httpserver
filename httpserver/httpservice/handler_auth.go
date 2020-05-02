@@ -16,9 +16,7 @@ func (s *Service) checkAuthentication(username, password string) error {
 	// В режиме "INTERNAL" сравнимаем пользователя пароль с тем что был передан при старте адаптера
 	if s.cfg.AuthType == "INTERNAL" {
 		if s.cfg.HTTPUserID != username || s.cfg.HTTPUserPwd != password {
-			myerr := myerror.New("8010", "Internal authentication - invalid user or password: username", username)
-			mylog.PrintfErrorInfo(myerr)
-			return myerr
+			return myerror.New("8010", "Internal authentication - invalid user or password: username", username).PrintfInfo()
 		}
 		mylog.PrintfInfoMsg("Success Internal Authentication: username", username)
 
@@ -33,21 +31,16 @@ func (s *Service) checkAuthentication(username, password string) error {
 		status, err := auth.Authenticate(config, username, password)
 
 		if err != nil {
-			myerr := myerror.WithCause("8011", "Error MS AD Authentication: Server, Port, BaseDN, Security, username", err, s.cfg.MSADServer, s.cfg.MSADPort, s.cfg.MSADBaseDN, s.cfg.MSADSecurity, username)
-			mylog.PrintfErrorInfo(myerr)
-			return myerr
+			return myerror.WithCause("8011", "Error MS AD Authentication: Server, Port, BaseDN, Security, username", err, s.cfg.MSADServer, s.cfg.MSADPort, s.cfg.MSADBaseDN, s.cfg.MSADSecurity, username).PrintfInfo()
 		}
 
 		if !status {
-			myerr := myerror.New("8010", "MS AD authentication - invalid user or password: Server, Port, BaseDN, Security, username", s.cfg.MSADServer, s.cfg.MSADPort, s.cfg.MSADBaseDN, s.cfg.MSADSecurity, username)
-			mylog.PrintfErrorInfo(myerr)
-			return myerr
+			return myerror.New("8010", "MS AD authentication - invalid user or password: Server, Port, BaseDN, Security, username", s.cfg.MSADServer, s.cfg.MSADPort, s.cfg.MSADBaseDN, s.cfg.MSADSecurity, username).PrintfInfo()
 		}
+
 		mylog.PrintfInfoMsg("Success MS AD Authentication: username", username)
 	} else {
-		myerr := myerror.New("8010", "Incorrect authentication type: ")
-		mylog.PrintfErrorInfo(myerr)
-		return myerr
+		return myerror.New("8010", "Incorrect authentication type").PrintfInfo()
 	}
 
 	return nil
@@ -63,8 +56,7 @@ func (s *Service) SinginHandler(w http.ResponseWriter, r *http.Request) {
 	// Считаем из заголовка HTTP Basic Authentication
 	username, password, ok := r.BasicAuth()
 	if !ok {
-		myerr := myerror.New("8004", "Header 'Authorization' is not set: reqID", reqID)
-		mylog.PrintfErrorInfo(myerr)
+		myerr := myerror.New("8004", "Header 'Authorization' is not set: reqID", reqID).PrintfInfo()
 		s.processError(myerr, w, http.StatusUnauthorized, reqID)
 		return
 	}
@@ -121,8 +113,7 @@ func (s *Service) JWTRefreshHandler(w http.ResponseWriter, r *http.Request) {
 		// Считаем token из requests cookies
 		cookie, err := r.Cookie("token")
 		if err != nil {
-			myerr := myerror.WithCause("8005", "JWT token does not present in Cookie. You have to authorize first.", err)
-			mylog.PrintfErrorInfo(myerr)
+			myerr := myerror.WithCause("8005", "JWT token does not present in Cookie. You have to authorize first.", err).PrintfInfo()
 			s.processError(myerr, w, http.StatusUnauthorized, reqID) // расширенное логирование ошибки в контексте HTTP
 			return
 		}

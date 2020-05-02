@@ -5,11 +5,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync/atomic"
 
+	"github.com/romapres2010/httpserver/bytespool"
+	myctx "github.com/romapres2010/httpserver/ctx"
 	myerror "github.com/romapres2010/httpserver/error"
 	httplog "github.com/romapres2010/httpserver/httpserver/httplog"
+	"github.com/romapres2010/httpserver/json"
 	myjwt "github.com/romapres2010/httpserver/jwt"
 	mylog "github.com/romapres2010/httpserver/log"
 )
@@ -32,13 +36,15 @@ var requestID uint64
 
 // Service represent HTTP service
 type Service struct {
-	сtx      context.Context    // корневой контекст при инициации сервиса
+	ctx      context.Context    // корневой контекст при инициации сервиса
 	cancel   context.CancelFunc // функция закрытия глобального контекста
 	cfg      *Config            // конфигурационные параметры
 	Handlers Handlers           // список обработчиков
 
 	// вложенные сервисы
-	logger *httplog.Logger // сервис логирования HTTP
+	logger      *httplog.Logger // сервис логирования HTTP
+	jsonService *json.Service   // реализация JSON сервиса
+	bytesPool   *bytespool.Pool // represent pooling of []byte
 }
 
 // Config repsent HTTP Service configurations
@@ -60,41 +66,67 @@ type Config struct {
 	HTTPErrorLogBody   bool   // логирование ошибок в тело HTTP ответа
 	HTTPLog            bool   // логирование HTTP трафика в файл
 	HTTPLogFileName    string // файл логирование HTTP трафика
+	UseBufPool         bool   // use []byte poolling
+	BufPooledSize      int    // recomended size of []byte for poolling
+	BufPooledMaxSize   int    // max size of []byte for poolling
 
 	// конфигурация вложенных сервисов
-	LogCfg httplog.Config // конфигурация HTTP логирования
+	LogCfg       httplog.Config   // конфигурация HTTP логирования
+	bytesPoolCfg bytespool.Config // конфигурация bytesPool
 }
 
 // New create new HTTP service
-func New(ctx context.Context, cfg *Config) (*Service, *httplog.Logger, error) {
+func New(ctx context.Context, cfg *Config, jsonService *json.Service) (*Service, *httplog.Logger, error) {
 	var err error
 
+	mylog.PrintfInfoMsg("Creating new HTTP service")
+
+	{ // входные проверки
+		if jsonService == nil {
+			return nil, nil, myerror.New("6030", "Empty JSON service").PrintfInfo()
+		}
+	} // входные проверки
+
 	service := &Service{
-		cfg: cfg,
+		cfg:         cfg,
+		jsonService: jsonService,
 	}
 
 	// создаем контекст с отменой
 	if ctx == nil {
-		service.сtx, service.cancel = context.WithCancel(context.Background())
+		service.ctx, service.cancel = context.WithCancel(context.Background())
 	} else {
-		service.сtx, service.cancel = context.WithCancel(ctx)
+		service.ctx, service.cancel = context.WithCancel(ctx)
 	}
 
 	// создаем обработчик для логирования HTTP
-	if service.logger, err = httplog.New(service.сtx, &cfg.LogCfg, cfg.HTTPLogFileName); err != nil {
+	if service.logger, err = httplog.New(service.ctx, &cfg.LogCfg, cfg.HTTPLogFileName); err != nil {
 		return nil, nil, err
 	}
 
 	// Наполним список обрабочиков
 	service.Handlers = map[string]Handler{
-		"/echo":       Handler{"/echo", service.RecoverWrap(service.EchoHandler), "POST"},
-		"/signin":     Handler{"/signin", service.RecoverWrap(service.SinginHandler), "POST"},
-		"/refresh":    Handler{"/refresh", service.RecoverWrap(service.JWTRefreshHandler), "POST"},
-		"/httplog":    Handler{"/httplog", service.RecoverWrap(service.HTTPLogHandler), "POST"},
-		"/httperrlog": Handler{"/httperrlog", service.RecoverWrap(service.HTTPErrorLogHandler), "POST"},
-		"/loglevel":   Handler{"/loglevel", service.RecoverWrap(service.LogLevelHandler), "POST"},
+		// Типовые обработчики
+		"EchoHandler":         Handler{"/echo", service.recoverWrap(service.EchoHandler), "POST"},
+		"SinginHandler":       Handler{"/signin", service.recoverWrap(service.SinginHandler), "POST"},
+		"JWTRefreshHandler":   Handler{"/refresh", service.recoverWrap(service.JWTRefreshHandler), "POST"},
+		"HTTPLogHandler":      Handler{"/httplog", service.recoverWrap(service.HTTPLogHandler), "POST"},
+		"HTTPErrorLogHandler": Handler{"/httperrlog", service.recoverWrap(service.HTTPErrorLogHandler), "POST"},
+		"LogLevelHandler":     Handler{"/loglevel", service.recoverWrap(service.LogLevelHandler), "POST"},
+
+		// JSON обработчики
+		"CreateDeptHandler": Handler{"/depts", service.recoverWrap(service.CreateDeptHandler), "POST"},
+		"GetDeptHandler":    Handler{"/depts/{id:[0-9]+}", service.recoverWrap(service.GetDeptHandler), "GET"},
+		"UpdateDeptHandler": Handler{"/depts/{id:[0-9]+}", service.recoverWrap(service.UpdateDeptHandler), "PUT"},
 	}
 
+	// создаем BytesPool
+	if service.cfg.UseBufPool {
+		service.cfg.bytesPoolCfg.PooledSize = service.cfg.BufPooledSize
+		service.bytesPool = bytespool.New(&service.cfg.bytesPoolCfg)
+	}
+
+	mylog.PrintfInfoMsg("HTTP service is created")
 	return service, service.logger, nil
 }
 
@@ -111,13 +143,18 @@ func (s *Service) Shutdown() (myerr error) {
 	if s.logger != nil {
 		myerr = s.logger.Close()
 	}
+
+	// Print statistics about bytes pool
+	if s.cfg.UseBufPool && s.bytesPool != nil {
+		s.bytesPool.PrintBytesPoolStats()
+	}
 	return
 }
 
-// RecoverWrap cover handler functions with panic recoverer
-func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
+// recoverWrap cover handler functions with panic recoverer
+func (s *Service) recoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// объявляем функцию восстановления после паники
+		// функция восстановления после паники
 		defer func() {
 			var myerr error
 			r := recover()
@@ -143,24 +180,24 @@ func (s *Service) RecoverWrap(handlerFunc http.HandlerFunc) http.HandlerFunc {
 	})
 }
 
-// Process - represent server common task in process incoming HTTP request
-func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request, fn func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error)) error {
-	var myerr error
+// process - represent server common task in process incoming HTTP request
+func (s *Service) process(method string, w http.ResponseWriter, r *http.Request, fn func(ctx context.Context, requestBuf []byte, buf []byte) ([]byte, Header, int, error)) (myerr error) {
 
 	// Получить уникальный номер HTTP запроса
 	reqID := GetNextRequestID()
 
+	// для каждого запроса поздаем новый контекст, сохраняем в нем уникальный номер HTTP запроса
+	ctx := myctx.NewContextRequestID(s.ctx, reqID)
+
 	// Логируем входящий HTTP запрос
 	if s.logger != nil {
-		_ = s.logger.LogHTTPInRequest(s.сtx, r, reqID) // При сбое HTTP логирования, делаем системное логирование, но работу не останавливаем
-		mylog.PrintfDebugMsg("Logging HTTP in request: reqID", reqID)
+		_ = s.logger.LogHTTPInRequest(ctx, r) // При сбое HTTP логирования, делаем системное логирование, но работу не останавливаем
 	}
 
 	// Проверим разрешенный метод
 	mylog.PrintfDebugMsg("Check allowed HTTP method: reqID, request.Method, method", reqID, r.Method, method)
 	if r.Method != method {
-		myerr = myerror.New("8000", "HTTP method is not allowed: reqID, request.Method, method", reqID, r.Method, method)
-		mylog.PrintfErrorInfo(myerr)
+		myerr = myerror.New("8000", "HTTP method is not allowed: reqID, request.Method, method", reqID, r.Method, method).PrintfInfo()
 		s.processError(myerr, w, http.StatusMethodNotAllowed, reqID) // расширенное логирование ошибки в контексте HTTP
 		return myerr
 	}
@@ -173,8 +210,7 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 		// Считаем из заголовка HTTP Basic Authentication
 		username, password, ok := r.BasicAuth()
 		if !ok {
-			myerr := myerror.New("8004", "Header 'Authorization' is not set")
-			mylog.PrintfErrorInfo(myerr)
+			myerr := myerror.New("8004", "Header 'Authorization' is not set").PrintfInfo()
 			s.processError(myerr, w, http.StatusUnauthorized, reqID)
 			return myerr
 		}
@@ -195,8 +231,7 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 		// Считаем token из requests cookies
 		cookie, err := r.Cookie("token")
 		if err != nil {
-			myerr := myerror.WithCause("8005", "JWT token does not present in Cookie. You have to authorize first.", err)
-			mylog.PrintfErrorInfo(myerr)
+			myerr := myerror.WithCause("8005", "JWT token does not present in Cookie. You have to authorize first.", err).PrintfInfo()
 			s.processError(myerr, w, http.StatusUnauthorized, reqID) // расширенное логирование ошибки в контексте HTTP
 			return myerr
 		}
@@ -213,31 +248,46 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 	mylog.PrintfDebugMsg("Reading request body: reqID", reqID)
 	requestBuf, err := ioutil.ReadAll(r.Body)
 	if err != nil {
-		myerr = myerror.WithCause("8001", "Failed to read HTTP body: reqID", err, reqID)
-		mylog.PrintfErrorInfo(myerr)
+		myerr = myerror.WithCause("8001", "Failed to read HTTP body: reqID", err, reqID).PrintfInfo()
 		s.processError(myerr, w, http.StatusInternalServerError, reqID) // расширенное логирование ошибки в контексте HTTP
 		return myerr
 	}
 	mylog.PrintfDebugMsg("Read request body: reqID, len(body)", reqID, len(requestBuf))
 
+	// Выделяем новый буфер из pool, он может использоваться для копирования JSON / XML
+	// Если буфер будет недостаточного размера, то он не будет использован
+	var buf []byte
+	if s.cfg.UseBufPool && s.bytesPool != nil {
+		buf = s.bytesPool.GetBuf()
+		mylog.PrintfDebugMsg("Got []byte buffer from pool: size", cap(buf))
+	}
+
 	// вызываем обработчик
 	mylog.PrintfDebugMsg("Calling external function handler: reqID, function", reqID, fn)
-	responseBuf, header, status, myerr := fn(requestBuf, reqID)
+	responseBuf, header, status, myerr := fn(ctx, requestBuf, buf)
 	if myerr != nil {
 		mylog.PrintfErrorInfo(myerr)
 		s.processError(myerr, w, status, reqID) // расширенное логирование ошибки в контексте HTTP
 		return myerr
 	}
 
-	// use HSTS Strict-Transport-Security
-	if s.cfg.UseHSTS {
-		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
+	// Если переданного буфера не хватило, то мог быть создан новый буфер. Вернем его в pool
+	if responseBuf != nil && buf != nil && s.cfg.UseBufPool && s.bytesPool != nil {
+		if reflect.ValueOf(buf).Pointer() != reflect.ValueOf(responseBuf).Pointer() {
+			mylog.PrintfDebugMsg("Response []byte buffer not equal to that got from pool: poolBufSize, responseBufSize", cap(buf), cap(responseBuf))
+			// Если новый буфер подходит по размерам для хранения в pool
+			if cap(responseBuf) >= s.cfg.BufPooledSize && cap(responseBuf) <= s.cfg.BufPooledMaxSize {
+				defer s.bytesPool.PutBuf(responseBuf)
+			}
+		} else {
+			// Если ранее выделенный пул не был использован, то не сохраняем его
+			defer s.bytesPool.PutBuf(buf)
+		}
 	}
 
 	// Логируем ответ в файл
 	if s.logger != nil {
-		mylog.PrintfDebugMsg("Logging HTTP out response: reqID", reqID)
-		_ = s.logger.LogHTTPOutResponse(s.сtx, header, responseBuf, status, reqID) // При сбое HTTP логирования, делаем системное логирование, но работу не останавливаем
+		_ = s.logger.LogHTTPOutResponse(ctx, header, responseBuf, status) // При сбое HTTP логирования, делаем системное логирование, но работу не останавливаем
 	}
 
 	// Записываем заголовок ответа
@@ -246,6 +296,12 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 		for key, h := range header {
 			w.Header().Set(key, h)
 		}
+	}
+
+	// Устанвливаем HSTS Strict-Transport-Security
+	if s.cfg.UseHSTS {
+		mylog.PrintfDebugMsg("Set HSTS Strict-Transport-Security header")
+		w.Header().Add("Strict-Transport-Security", "max-age=63072000; includeSubDomains")
 	}
 
 	// Записываем HTTP статус ответа
@@ -257,12 +313,13 @@ func (s *Service) Process(method string, w http.ResponseWriter, r *http.Request,
 		mylog.PrintfDebugMsg("Writing HTTP response body: reqID, len(body)", reqID, len(responseBuf))
 		respWrittenLen, err := w.Write(responseBuf)
 		if err != nil {
-			myerr = myerror.WithCause("8002", "Failed to write HTTP repsonse: reqID", err)
-			mylog.PrintfErrorInfo(myerr)
+			myerr = myerror.WithCause("8002", "Failed to write HTTP repsonse: reqID", err).PrintfInfo()
 			s.processError(myerr, w, http.StatusInternalServerError, reqID) // расширенное логирование ошибки в контексте HTTP
 			return myerr
 		}
 		mylog.PrintfDebugMsg("Written HTTP response: reqID, len(body)", reqID, respWrittenLen)
+	} else {
+		mylog.PrintfDebugMsg("HTTP response body is empty")
 	}
 
 	return nil

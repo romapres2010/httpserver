@@ -120,9 +120,7 @@ func main() {
 
 					if err != nil {
 						// ошибку через закрытие передаем на уровень выше
-						myerr = myerror.WithCause("6020", "Error sync log file before closing", err)
-						mylog.PrintfErrorInfo(myerr)
-						return
+						myerr = myerror.WithCause("6020", "Error sync log file before closing", err).PrintfInfo()
 					}
 				}
 			}()

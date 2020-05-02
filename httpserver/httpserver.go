@@ -3,7 +3,6 @@ package httpserver
 import (
 	"context"
 	"crypto/tls"
-	"fmt"
 	"net"
 	"net/http"
 	"net/http/pprof"
@@ -13,6 +12,7 @@ import (
 	myerror "github.com/romapres2010/httpserver/error"
 	"github.com/romapres2010/httpserver/httpserver/httplog"
 	"github.com/romapres2010/httpserver/httpserver/httpservice"
+	"github.com/romapres2010/httpserver/json"
 	mylog "github.com/romapres2010/httpserver/log"
 )
 
@@ -21,7 +21,7 @@ type Server struct {
 	ctx    context.Context    // контекст при инициации сервиса
 	cancel context.CancelFunc // функция закрытия контекста
 	cfg    *Config            // конфигурация HTTP сервера
-	errCh  chan error         // канал ошибок
+	errCh  chan<- error       // канал ошибок
 	stopCh chan struct{}      // канал подтверждения об успешном закрытии HTTP сервера
 
 	// вложенные сервисы
@@ -54,27 +54,25 @@ type Config struct {
 }
 
 // New create HTTP server
-func New(ctx context.Context, errCh chan error, cfg *Config) (*Server, error) {
+func New(ctx context.Context, errCh chan<- error, cfg *Config, jsonService *json.Service) (*Server, error) {
 	var err error
-	var server *Server
 
 	mylog.PrintfInfoMsg("Creating new HTTP server")
 
 	{ // входные проверки
 		if cfg == nil {
-			myerr := myerror.New("6030", "Empty HTTP server config")
-			mylog.PrintfErrorInfo(myerr)
-			return nil, myerr
+			return nil, myerror.New("6030", "Empty HTTP server config").PrintfInfo()
 		}
 		if cfg.ListenSpec == "" {
-			myerr := myerror.New("6030", "Empty HTTP listener address")
-			mylog.PrintfErrorInfo(myerr)
-			return nil, myerr
+			return nil, myerror.New("6030", "Empty HTTP listener address").PrintfInfo()
+		}
+		if jsonService == nil {
+			return nil, myerror.New("6030", "Empty JSON service").PrintfInfo()
 		}
 	} // входные проверки
 
 	// Создаем новый сервер
-	server = &Server{
+	server := &Server{
 		cfg:    cfg,
 		errCh:  errCh,
 		stopCh: make(chan struct{}, 1), // канал подтверждения об успешном закрытии HTTP сервера
@@ -88,7 +86,7 @@ func New(ctx context.Context, errCh chan error, cfg *Config) (*Server, error) {
 	}
 
 	// Новый HTTP сервис и HTTP logger
-	if server.httpService, server.logger, err = httpservice.New(server.ctx, &cfg.ServiceCfg); err != nil {
+	if server.httpService, server.logger, err = httpservice.New(server.ctx, &cfg.ServiceCfg, jsonService); err != nil {
 		return nil, err
 	}
 
@@ -133,9 +131,7 @@ func New(ctx context.Context, errCh chan error, cfg *Config) (*Server, error) {
 	{ // Определяем  листенер
 		server.listener, err = net.Listen("tcp", cfg.ListenSpec)
 		if err != nil {
-			myerr := myerror.WithCause("5006", "Failed to create new TCP listener: network = 'tcp', address", err, cfg.ListenSpec)
-			mylog.PrintfErrorInfo(myerr)
-			return nil, myerr
+			return nil, myerror.WithCause("5006", "Failed to create new TCP listener: network = 'tcp', address", err, cfg.ListenSpec).PrintfInfo()
 		}
 
 		mylog.PrintfInfoMsg("Created new TCP listener: network = 'tcp', address", cfg.ListenSpec)
@@ -181,23 +177,21 @@ func New(ctx context.Context, errCh chan error, cfg *Config) (*Server, error) {
 }
 
 // Run HTTP server - wait for error or exit
-func (s *Server) Run() error {
+func (s *Server) Run() (myerr error) {
 	// Функция восстановления после паники
 	defer func() {
-		var myerr error
 		r := recover()
 		if r != nil {
 			msg := "HTTP server recover from panic"
 			switch t := r.(type) {
 			case string:
-				myerr = myerror.New("8888", msg, t)
+				myerr = myerror.New("8888", msg, t).PrintfInfo()
 			case error:
-				myerr = myerror.WithCause("8888", msg, t)
+				myerr = myerror.WithCause("8888", msg, t).PrintfInfo()
 			default:
-				myerr = myerror.New("8888", msg)
+				myerr = myerror.New("8888", msg).PrintfInfo()
 			}
-			mylog.PrintfErrorInfo(myerr) // логируем ошибку
-			s.errCh <- myerr             // передаем ошибку в канал для уведомления daemon
+			//s.errCh <- myerr // передаем ошибку явно в канал для уведомления daemon или через возврат функции Run
 		}
 	}()
 
@@ -206,13 +200,16 @@ func (s *Server) Run() error {
 		mylog.PrintfInfoMsg("Starting HTTPS server: TLSSertFile, TLSKeyFile", s.cfg.TLSCertFile, s.cfg.TLSKeyFile)
 		return s.httpServer.ServeTLS(s.listener, s.cfg.TLSCertFile, s.cfg.TLSKeyFile)
 	}
-	mylog.PrintfInfoMsg(fmt.Sprintf("Starting HTTP server"))
+	mylog.PrintfInfoMsg("Starting HTTP server")
 	return s.httpServer.Serve(s.listener)
 }
 
 // Shutdown HTTP server
 func (s *Server) Shutdown() (myerr error) {
 	mylog.PrintfInfoMsg("Waiting for shutdown HTTP Server: sec", s.cfg.ShutdownTimeout)
+
+	// подтверждение о закрытии HTTP сервера
+	defer func() { s.stopCh <- struct{}{} }()
 
 	// закроем контекст HTTP сервера
 	defer s.cancel()
@@ -223,8 +220,7 @@ func (s *Server) Shutdown() (myerr error) {
 
 	// ожидаем закрытия активных подключений в течении ShutdownTimeout
 	if err := s.httpServer.Shutdown(cancelCtx); err != nil {
-		myerr = myerror.WithCause("8003", "Failed to shutdown HTTP server: sec", err, s.cfg.ShutdownTimeout)
-		mylog.PrintfErrorInfo(myerr)
+		myerr = myerror.WithCause("8003", "Failed to shutdown HTTP server: sec", err, s.cfg.ShutdownTimeout).PrintfInfo()
 
 		// Останавливаем служебные сервисы, их ошибку игнорируем
 		_ = s.httpService.Shutdown()
@@ -236,9 +232,5 @@ func (s *Server) Shutdown() (myerr error) {
 	myerr = s.httpService.Shutdown()
 
 	mylog.PrintfInfoMsg("HTTP Server shutdown successfuly")
-
-	// подтверждение об успешном закрытии HTTP сервера
-	s.stopCh <- struct{}{}
-
 	return
 }

@@ -1,10 +1,12 @@
 package httpservice
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
+	myctx "github.com/romapres2010/httpserver/ctx"
 	myerror "github.com/romapres2010/httpserver/error"
 	httplog "github.com/romapres2010/httpserver/httpserver/httplog"
 	mylog "github.com/romapres2010/httpserver/log"
@@ -15,7 +17,9 @@ func (s *Service) HTTPLogHandler(w http.ResponseWriter, r *http.Request) {
 	mylog.PrintfDebugMsg("START   ==================================================================================")
 
 	// Запускаем обработчик, возврат ошибки игнорируем
-	_ = s.Process("POST", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
+	_ = s.process("POST", w, r, func(ctx context.Context, requestBuf []byte, buf []byte) ([]byte, Header, int, error) {
+		reqID := myctx.FromContextRequestID(ctx) // RequestID передается через context
+
 		mylog.PrintfDebugMsg("START: reqID", reqID)
 
 		// новый конфиг для HTTP Loger
@@ -82,7 +86,9 @@ func (s *Service) HTTPErrorLogHandler(w http.ResponseWriter, r *http.Request) {
 	mylog.PrintfDebugMsg("START   ==================================================================================")
 
 	// Запускаем обработчик, возврат ошибки игнорируем
-	_ = s.Process("POST", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
+	_ = s.process("POST", w, r, func(ctx context.Context, requestBuf []byte, buf []byte) ([]byte, Header, int, error) {
+		reqID := myctx.FromContextRequestID(ctx) // RequestID передается через context
+
 		mylog.PrintfDebugMsg("START: reqID", reqID)
 
 		{ // обрабатываем HTTP-Err-Log из заголовка
@@ -120,7 +126,9 @@ func (s *Service) LogLevelHandler(w http.ResponseWriter, r *http.Request) {
 	mylog.PrintfDebugMsg("START   ==================================================================================")
 
 	// Запускаем обработчик, возврат ошибки игнорируем
-	_ = s.Process("POST", w, r, func(requestBuf []byte, reqID uint64) ([]byte, Header, int, error) {
+	_ = s.process("POST", w, r, func(ctx context.Context, requestBuf []byte, buf []byte) ([]byte, Header, int, error) {
+		reqID := myctx.FromContextRequestID(ctx) // RequestID передается через context
+
 		mylog.PrintfDebugMsg("START: reqID", reqID)
 
 		LogLevelStr := r.Header.Get("Log-Level-Filter")

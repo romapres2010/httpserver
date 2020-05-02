@@ -10,7 +10,9 @@ import (
 
 	myerror "github.com/romapres2010/httpserver/error"
 	"github.com/romapres2010/httpserver/httpserver"
+	"github.com/romapres2010/httpserver/json"
 	mylog "github.com/romapres2010/httpserver/log"
+	"github.com/romapres2010/httpserver/postgres"
 )
 
 // Daemon repesent top level daemon
@@ -20,8 +22,14 @@ type Daemon struct {
 	cfg    *Config            // конфигурация демона
 
 	// Сервисы демона
-	httpserver      *httpserver.Server // HTTP сервер
-	httpserverErrCh chan error         // канал ошибок для HTTP сервера
+	httpServer      *httpserver.Server // HTTP сервер
+	httpServerErrCh chan error         // канал ошибок для HTTP сервера
+
+	pqService      *postgres.Service // реализация сервиса на PostgreSQL
+	pqServiceErrCh chan error        // канал ошибок для PostgreSQL сервиса
+
+	jsonService      *json.Service // реализация JSON сервиса
+	jsonServiceErrCh chan error    // канал ошибок для JSON сервиса
 }
 
 // Config repesent daemon options
@@ -33,7 +41,9 @@ type Config struct {
 	HTTPUserPwd    string // пароль для HTTP Basic Authentication
 
 	// Конфигурация вложенных сервисов
-	httpServerCfg httpserver.Config // конфигурация HTTP сервера
+	httpServerCfg  httpserver.Config // конфигурация HTTP сервера
+	pqServiceCfg   postgres.Config   // конфигурация PostgreSQL сервиса
+	jsonServiceCfg json.Config       // конфигурация JSON сервиса
 }
 
 // New create Daemon
@@ -45,21 +55,19 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 
 	{ // входные проверки
 		if cfg == nil {
-			myerr := myerror.New("6030", "Empty daemon config")
-			mylog.PrintfErrorInfo(myerr)
-			return nil, myerr
+			return nil, myerror.New("6030", "Empty daemon config").PrintfInfo()
 		}
 		if cfg.ConfigFileName == "" {
-			myerr := myerror.New("6030", "Empty config file name")
-			mylog.PrintfErrorInfo(myerr)
-			return nil, myerr
+			return nil, myerror.New("6030", "Empty config file name").PrintfInfo()
 		}
 	} // входные проверки
 
 	// Создаем новый демон
 	daemon := &Daemon{
-		cfg:             cfg,
-		httpserverErrCh: make(chan error, 1), // канал ошибок HTTP сервера
+		cfg:              cfg,
+		httpServerErrCh:  make(chan error, 1), // канал ошибок HTTP сервера
+		pqServiceErrCh:   make(chan error, 1), // канал ошибок для PostgreSQL сервиса
+		jsonServiceErrCh: make(chan error, 1), // канал ошибок для JSON сервиса
 	}
 
 	// создаем корневой контекст с отменой
@@ -73,6 +81,25 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 	if config, err = loadConfigFile(daemon.cfg.ConfigFileName); err != nil {
 		return nil, err
 	}
+
+	{ // создаем сервис PostgreSQL
+		// Настраиваем конфигурацию HTTP Logger
+		if err = loadPqServiceConfig(config, &daemon.cfg.pqServiceCfg); err != nil {
+			return nil, err
+		}
+
+		if daemon.pqService, err = postgres.New(daemon.ctx, daemon.pqServiceErrCh, &daemon.cfg.pqServiceCfg); err != nil {
+			return nil, err
+		}
+	} // создаем сервис PostgreSQL
+
+	{ // создаем сервис JSON
+		// daemon.cfg.jsonServiceCfg. =
+
+		if daemon.jsonService, err = json.New(daemon.ctx, daemon.jsonServiceErrCh, &daemon.cfg.jsonServiceCfg, daemon.pqService, daemon.pqService); err != nil {
+			return nil, err
+		}
+	} // создаем сервис JSON
 
 	{ // создаем HTTP server
 		// Настраиваем конфигурацию HTTP server
@@ -95,9 +122,7 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 			if err = loadHTTPServiceConfig(config, &daemon.cfg.httpServerCfg.ServiceCfg); err == nil {
 				// задан ли в командной строке JSON web token secret key
 				if daemon.cfg.httpServerCfg.ServiceCfg.UseJWT && daemon.cfg.JwtKey == nil {
-					myerr := myerror.New("6023", "JSON web token secret key is null")
-					mylog.PrintfErrorInfo(myerr)
-					return nil, myerr
+					return nil, myerror.New("6023", "JSON web token secret key is null").PrintfInfo()
 				}
 
 				// Настраиваем конфигурацию HTTP Logger
@@ -110,14 +135,10 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 		} // Настраиваем конфигурацию HTTP service
 
 		// Создаем HTTP server
-		if daemon.httpserver, err = httpserver.New(daemon.ctx, daemon.httpserverErrCh, &daemon.cfg.httpServerCfg); err != nil {
+		if daemon.httpServer, err = httpserver.New(daemon.ctx, daemon.httpServerErrCh, &daemon.cfg.httpServerCfg, daemon.jsonService); err != nil {
 			return nil, err
 		}
 	} // создаем HTTP server
-
-	{ // создаем сервис ...
-		// ...
-	} // создаем сервис ...
 
 	mylog.PrintfInfoMsg("New daemon is created")
 
@@ -129,7 +150,7 @@ func (d *Daemon) Run() error {
 	mylog.PrintfInfoMsg("Starting daemon")
 
 	// запускаем в фоне HTTP сервер, возврат в канал ошибок
-	go func() { d.httpserverErrCh <- d.httpserver.Run() }()
+	go func() { d.httpServerErrCh <- d.httpServer.Run() }()
 
 	mylog.PrintfInfoMsg("Daemon is running. For exit <CTRL-c>")
 
@@ -143,7 +164,7 @@ func (d *Daemon) Run() error {
 		mylog.PrintfInfoMsg("Exiting, got signal", s)
 		d.Shutdown() // останавливаем daemon
 		return nil
-	case err := <-d.httpserverErrCh: // возврат от HTTP сервера в канал ошибок
+	case err := <-d.httpServerErrCh: // возврат от HTTP сервера в канал ошибок
 		mylog.PrintfInfoMsg("Exiting, got error")
 		mylog.PrintfErrorInfo(err) // логируем ошибку
 		d.Shutdown()               // останавливаем daemon
@@ -159,8 +180,18 @@ func (d *Daemon) Shutdown() {
 	defer d.cancel()
 
 	// Останавливаем HTTP сервер, ожидаем завершения активных подключений
-	if myerr := d.httpserver.Shutdown(); myerr != nil {
-		mylog.PrintfErrorInfo(myerr) // логируем результат остановки HTTP сервера
+	if myerr := d.httpServer.Shutdown(); myerr != nil {
+		mylog.PrintfErrorInfo(myerr) // дополнительно логируем результат остановки
+	}
+
+	// Останавливаем JSON сервис
+	if myerr := d.jsonService.Shutdown(); myerr != nil {
+		mylog.PrintfErrorInfo(myerr) // дополнительно логируем результат
+	}
+
+	// Останавливаем PostgreSQL сервис
+	if myerr := d.pqService.Shutdown(); myerr != nil {
+		mylog.PrintfErrorInfo(myerr) // дополнительно логируем результат
 	}
 
 	// ... Останавливаем остальные сервисы

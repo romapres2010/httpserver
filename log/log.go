@@ -27,6 +27,13 @@ func InitLogger(wrt io.Writer) {
 
 	// set std logger to our custom
 	log.SetOutput(logFilter)
+
+	/*
+		customFormatter := new(log.TextFormatter)
+		customFormatter.TimestampFormat = "2006-01-02 15:04:05"
+		customFormatter.FullTimestamp = true
+		log.SetFormatter(customFormatter)
+	*/
 }
 
 //SetFilter set log level
@@ -37,6 +44,11 @@ func SetFilter(lev string) {
 //PrintfInfoMsg print message in Info level
 func PrintfInfoMsg(mes string, args ...interface{}) {
 	printfMsg("[INFO]", 0, mes, args...)
+}
+
+//PrintfInfoMsgDepth print message in Info level
+func PrintfInfoMsgDepth(mes string, depth int, args ...interface{}) {
+	printfMsg("[INFO]", depth, mes, args...)
 }
 
 //PrintfDebugMsg print message in Debug level
@@ -52,6 +64,11 @@ func PrintfErrorInfo(err error, args ...interface{}) {
 //PrintfErrorMsg print message in Error level
 func PrintfErrorMsg(mes string, args ...interface{}) {
 	printfMsg("[ERROR]", 0, mes, args...)
+}
+
+//PrintfMsg print message
+func PrintfMsg(level string, depth int, mes string, args ...interface{}) {
+	printfMsg(level, depth, mes, args...)
 }
 
 //printfMsg print message
