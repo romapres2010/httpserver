@@ -6,12 +6,12 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/romapres2010/httpserver/db"
 	myerror "github.com/romapres2010/httpserver/error"
 	"github.com/romapres2010/httpserver/httpserver"
 	"github.com/romapres2010/httpserver/httpserver/httplog"
 	"github.com/romapres2010/httpserver/httpserver/httpservice"
 	mylog "github.com/romapres2010/httpserver/log"
-	"github.com/romapres2010/httpserver/postgres"
 	"github.com/sasbury/mini"
 	auth "gopkg.in/korylprince/go-ad-auth.v2"
 )
@@ -326,49 +326,49 @@ func loadHTTPLoggerConfig(config *mini.Config, cfg *httplog.Config) error {
 	return nil
 }
 
-// loadPqServiceConfig load PostgreSQL confiuration from file
-func loadPqServiceConfig(config *mini.Config, cfg *postgres.Config) error {
+// loadDBServiceConfig load PostgreSQL confiuration from file
+func loadDBServiceConfig(config *mini.Config, cfg *db.Config) error {
 	var myerr error
 
 	{ // секция POSTGRESQL
-		sectionName := "POSTGRESQL"
+		sectionName := "DB"
 
-		if cfg.PqHost, myerr = loadStringFromSection(sectionName, config, "PqHost", true, ""); myerr != nil {
+		if cfg.SQLCfg.Host, myerr = loadStringFromSection(sectionName, config, "Host", true, ""); myerr != nil {
 			return myerr
 		}
-		if cfg.PqPort, myerr = loadStringFromSection(sectionName, config, "PqPort", true, ""); myerr != nil {
-			return myerr
-		}
-
-		if cfg.PqDbname, myerr = loadStringFromSection(sectionName, config, "PqDbname", true, ""); myerr != nil {
+		if cfg.SQLCfg.Port, myerr = loadStringFromSection(sectionName, config, "Port", true, ""); myerr != nil {
 			return myerr
 		}
 
-		if cfg.PqSslMode, myerr = loadStringFromSection(sectionName, config, "PqSslMode", true, ""); myerr != nil {
+		if cfg.SQLCfg.Dbname, myerr = loadStringFromSection(sectionName, config, "Dbname", true, ""); myerr != nil {
 			return myerr
 		}
 
-		if cfg.PqUser, myerr = loadStringFromSection(sectionName, config, "PqUser", true, ""); myerr != nil {
+		if cfg.SQLCfg.SslMode, myerr = loadStringFromSection(sectionName, config, "SslMode", true, ""); myerr != nil {
 			return myerr
 		}
 
-		if cfg.PqPass, myerr = loadStringFromSection(sectionName, config, "PqPass", true, ""); myerr != nil {
+		if cfg.SQLCfg.User, myerr = loadStringFromSection(sectionName, config, "User", true, ""); myerr != nil {
 			return myerr
 		}
 
-		if cfg.PqDriverName, myerr = loadStringFromSection(sectionName, config, "PqDriverName", true, "pgx"); myerr != nil {
+		if cfg.SQLCfg.Pass, myerr = loadStringFromSection(sectionName, config, "Pass", true, ""); myerr != nil {
 			return myerr
 		}
 
-		if cfg.PqConnMaxLifetime, myerr = loadIntFromSection(sectionName, config, "PqConnMaxLifetime", true, "10000"); myerr != nil {
+		if cfg.SQLCfg.DriverName, myerr = loadStringFromSection(sectionName, config, "DriverName", true, "pgx"); myerr != nil {
 			return myerr
 		}
 
-		if cfg.PqMaxOpenConns, myerr = loadIntFromSection(sectionName, config, "PqMaxOpenConns", true, "16"); myerr != nil {
+		if cfg.SQLCfg.ConnMaxLifetime, myerr = loadIntFromSection(sectionName, config, "ConnMaxLifetime", true, "10000"); myerr != nil {
 			return myerr
 		}
 
-		if cfg.PqMaxIdleConns, myerr = loadIntFromSection(sectionName, config, "PqMaxIdleConns", true, "4"); myerr != nil {
+		if cfg.SQLCfg.MaxOpenConns, myerr = loadIntFromSection(sectionName, config, "MaxOpenConns", true, "16"); myerr != nil {
+			return myerr
+		}
+
+		if cfg.SQLCfg.MaxIdleConns, myerr = loadIntFromSection(sectionName, config, "MaxIdleConns", true, "4"); myerr != nil {
 			return myerr
 		}
 

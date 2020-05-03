@@ -18,11 +18,11 @@ type Config struct {
 	PooledSize int
 }
 
-// Counter represent a pool statistics for benchmarking
+// Represent a pool statistics for benchmarking
 var (
-	countGetBytes uint64 // количество запросов кэша
-	countPutBytes uint64 // количество возвратов в кэша
-	countNewBytes uint64 // количество создания нового объекта
+	countGet uint64 // количество запросов кэша
+	countPut uint64 // количество возвратов в кэша
+	countNew uint64 // количество создания нового объекта
 )
 
 // New create new BytesPool
@@ -31,7 +31,7 @@ func New(cfg *Config) *Pool {
 		cfg: cfg,
 		pool: sync.Pool{
 			New: func() interface{} {
-				atomic.AddUint64(&countNewBytes, 1)
+				atomic.AddUint64(&countNew, 1)
 				return make([]byte, cfg.PooledSize)
 			},
 		},
@@ -41,7 +41,7 @@ func New(cfg *Config) *Pool {
 
 // GetBuf allocates a new []byte
 func (p *Pool) GetBuf() []byte {
-	atomic.AddUint64(&countGetBytes, 1)
+	atomic.AddUint64(&countGet, 1)
 	return p.pool.Get().([]byte)
 }
 
@@ -51,11 +51,11 @@ func (p *Pool) PutBuf(buf []byte) {
 	if size < p.cfg.PooledSize { // не выгодно хранить маленькие буферы
 		return
 	}
-	atomic.AddUint64(&countPutBytes, 1)
+	atomic.AddUint64(&countPut, 1)
 	p.pool.Put(buf[:0])
 }
 
 // PrintBytesPoolStats print statistics about bytes pool
 func (p *Pool) PrintBytesPoolStats() {
-	mylog.PrintfInfoMsg("Usage butes pool: countGet, countPut, countNew", countGetBytes, countPutBytes, countNewBytes)
+	mylog.PrintfInfoMsg("Usage butes pool: countGet, countPut, countNew", countGet, countPut, countNew)
 }

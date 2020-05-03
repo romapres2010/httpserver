@@ -71,6 +71,9 @@ func (s *Service) Shutdown() (myerr error) {
 
 	// ...
 
+	// Print statistics about bytes pool
+	model.PrintModelPoolStats()
+
 	mylog.PrintfInfoMsg("JSON service shutdown successfuly")
 	return
 }

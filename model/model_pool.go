@@ -2,40 +2,44 @@ package model
 
 import (
 	"sync"
+	"sync/atomic"
+
+	mylog "github.com/romapres2010/httpserver/log"
 )
+
+// represent a pool statistics for benchmarking
+var (
+	countGet uint64 // количество запросов кэша
+	countPut uint64 // количество возвратов в кэша
+	countNew uint64 // количество создания нового объекта
+)
+
+// PrintModelPoolStats print pool statistics
+func PrintModelPoolStats() {
+	mylog.PrintfInfoMsg("Usage model pool: countGet, countPut, countNew", countGet, countPut, countNew)
+}
 
 // deptsPool represent depts pooling
 var deptsPool = sync.Pool{
-	New: func() interface{} { return new(Dept) },
+	New: func() interface{} {
+		atomic.AddUint64(&countNew, 1)
+		return new(Dept)
+	},
 }
 
 // empsPool represent emps pooling
 var empsPool = sync.Pool{
-	New: func() interface{} { return new(Emp) },
-}
-
-// deptsPKPool represent empsPK pooling
-var deptsPKPool = sync.Pool{
 	New: func() interface{} {
-		v := make([]*DeptPK, 0)
-		return DeptPKs(v)
+		atomic.AddUint64(&countNew, 1)
+		return new(Emp)
 	},
 }
-
-/*
-// EmpsPKPool represent empsPK pooling
-var empsPKPool = sync.Pool{
-	New: func() interface{} {
-		v := make([]*EmpPK, 0)
-		return EmpPKs(v)
-	},
-}
-*/
 
 // empSlicePool represent emps Slice pooling
 var empSlicePool = sync.Pool{
 	New: func() interface{} {
 		v := make([]*Emp, 0)
+		atomic.AddUint64(&countNew, 1)
 		return EmpSlice(v)
 	},
 }
@@ -46,7 +50,9 @@ func (p *Dept) Reset() {
 	p.Dname = ""
 	p.Loc.String = ""
 	p.Loc.Valid = false
-	EmpSlice(p.Emps).Reset()
+	if p.Emps != nil {
+		EmpSlice(p.Emps).Reset()
+	}
 	p.Emps = nil
 }
 
@@ -69,34 +75,11 @@ func (p *Emp) Reset() {
 	p.Deptno.Valid = false
 }
 
-/*
-// Reset reset all fields in structure - use for sync.Pool
-func (p EmpPKs) Reset() {
-	for i := range p {
-		p[i].Empno = 0
-	}
-}
-*/
-
-// Reset reset all fields in structure - use for sync.Pool
-func (p DeptPKs) Reset() {
-	for i := range p {
-		p[i].Deptno = 0
-	}
-}
-
-// Reset reset all fields in structure - use for sync.Pool
-func (p EmpSlice) Reset() {
-	for i := range p {
-		p[i].Reset()
-		PutEmp(p[i])
-	}
-}
-
 // GetDept allocates a new struct or grabs a cached one
 func GetDept() *Dept {
 	p := deptsPool.Get().(*Dept)
 	p.Reset()
+	atomic.AddUint64(&countGet, 1)
 	return p
 }
 
@@ -106,6 +89,7 @@ func PutDept(p *Dept, isCascad bool) {
 		PutEmpSlice(p.Emps, isCascad)
 		p.Emps = nil
 		deptsPool.Put(p)
+		atomic.AddUint64(&countPut, 1)
 	}
 }
 
@@ -113,6 +97,7 @@ func PutDept(p *Dept, isCascad bool) {
 func GetEmp() *Emp {
 	p := empsPool.Get().(*Emp)
 	p.Reset()
+	atomic.AddUint64(&countGet, 1)
 	return p
 }
 
@@ -120,53 +105,38 @@ func GetEmp() *Emp {
 func PutEmp(p *Emp) {
 	if p != nil {
 		empsPool.Put(p)
+		atomic.AddUint64(&countPut, 1)
 	}
 }
-
-// GetDeptsPK allocates a new struct or grabs a cached one
-func GetDeptsPK() DeptPKs {
-	p := deptsPKPool.Get().(DeptPKs)
-	p.Reset()
-	return p
-}
-
-// PutDeptsPK return struct to cache
-func PutDeptsPK(p DeptPKs) {
-	p = p[:0] // сброс
-	deptsPKPool.Put(p)
-}
-
-/*
-// GetEmpsPK allocates a new struct or grabs a cached one
-func GetEmpsPK() EmpPKs {
-	p := empsPKPool.Get().(EmpPKs)
-	p.Reset()
-	return p
-}
-
-// PutEmpsPK return struct to cache
-func PutEmpsPK(p EmpPKs) {
-	p = p[:0] // сброс
-	empsPKPool.Put(p)
-}
-*/
 
 // GetEmpSlice allocates a new struct or grabs a cached one
 func GetEmpSlice() EmpSlice {
 	p := empSlicePool.Get().(EmpSlice)
 	p.Reset()
+	atomic.AddUint64(&countGet, 1)
 	return p
+}
+
+// Reset reset all fields in structure - use for sync.Pool
+func (p EmpSlice) Reset() {
+	for i := range p {
+		p[i].Reset()
+		PutEmp(p[i])
+		p[i] = nil // что бы не осталось подвисших ссылок
+	}
 }
 
 // PutEmpSlice return struct to cache
 func PutEmpSlice(p EmpSlice, isCascad bool) {
 	if p != nil {
-		if isCascad {
-			for i := range p {
-				PutEmp(p[i])
+		for i := range p {
+			if isCascad {
+				// PutEmp(p[i])
 			}
+			p[i] = nil // что бы не осталось подвисших ссылок
 		}
-		p = p[:0] // сброс указателя слайса
+		p = p[:0] // сброс указателя среза
 		empSlicePool.Put(p)
+		atomic.AddUint64(&countPut, 1)
 	}
 }

@@ -1,0 +1,1 @@
+easyjson -all model.go 

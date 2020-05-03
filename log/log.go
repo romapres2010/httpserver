@@ -56,6 +56,11 @@ func PrintfDebugMsg(mes string, args ...interface{}) {
 	printfMsg("[DEBUG]", 0, mes, args...)
 }
 
+//PrintfDebugMsgDepth print message in Debug level
+func PrintfDebugMsgDepth(mes string, depth int, args ...interface{}) {
+	printfMsg("[DEBUG]", depth, mes, args...)
+}
+
 //PrintfErrorInfo print error in Info level
 func PrintfErrorInfo(err error, args ...interface{}) {
 	printfMsg("[INFO]", 0, err.Error(), args...)

@@ -5,7 +5,6 @@ import (
 )
 
 // DeptService represent basic interface for Dept
-// =====================================================================
 type DeptService interface {
 	GetDept(ctx context.Context, out *Dept) (bool, error)
 	GetDeptsPK(ctx context.Context, out *DeptPKs) error
@@ -17,7 +16,6 @@ type DeptService interface {
 }
 
 // EmpService represent basic interface for Emp
-// =====================================================================
 type EmpService interface {
 	GetEmp(ctx context.Context, out *Emp) (bool, error)
 	GetEmpsByDept(ctx context.Context, in *Dept, out *EmpSlice) error

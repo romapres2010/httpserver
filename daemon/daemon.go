@@ -8,11 +8,11 @@ import (
 
 	"github.com/sasbury/mini"
 
+	"github.com/romapres2010/httpserver/db"
 	myerror "github.com/romapres2010/httpserver/error"
 	"github.com/romapres2010/httpserver/httpserver"
 	"github.com/romapres2010/httpserver/json"
 	mylog "github.com/romapres2010/httpserver/log"
-	"github.com/romapres2010/httpserver/postgres"
 )
 
 // Daemon repesent top level daemon
@@ -25,8 +25,8 @@ type Daemon struct {
 	httpServer      *httpserver.Server // HTTP сервер
 	httpServerErrCh chan error         // канал ошибок для HTTP сервера
 
-	pqService      *postgres.Service // реализация сервиса на PostgreSQL
-	pqServiceErrCh chan error        // канал ошибок для PostgreSQL сервиса
+	dbService      *db.Service // реализация сервиса в БД
+	dbServiceErrCh chan error  // канал ошибок для БД
 
 	jsonService      *json.Service // реализация JSON сервиса
 	jsonServiceErrCh chan error    // канал ошибок для JSON сервиса
@@ -42,7 +42,7 @@ type Config struct {
 
 	// Конфигурация вложенных сервисов
 	httpServerCfg  httpserver.Config // конфигурация HTTP сервера
-	pqServiceCfg   postgres.Config   // конфигурация PostgreSQL сервиса
+	dbServiceCfg   db.Config         // конфигурация сервиса БД
 	jsonServiceCfg json.Config       // конфигурация JSON сервиса
 }
 
@@ -66,7 +66,7 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 	daemon := &Daemon{
 		cfg:              cfg,
 		httpServerErrCh:  make(chan error, 1), // канал ошибок HTTP сервера
-		pqServiceErrCh:   make(chan error, 1), // канал ошибок для PostgreSQL сервиса
+		dbServiceErrCh:   make(chan error, 1), // канал ошибок для PostgreSQL сервиса
 		jsonServiceErrCh: make(chan error, 1), // канал ошибок для JSON сервиса
 	}
 
@@ -82,13 +82,13 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 		return nil, err
 	}
 
-	{ // создаем сервис PostgreSQL
+	{ // создаем сервис DB
 		// Настраиваем конфигурацию HTTP Logger
-		if err = loadPqServiceConfig(config, &daemon.cfg.pqServiceCfg); err != nil {
+		if err = loadDBServiceConfig(config, &daemon.cfg.dbServiceCfg); err != nil {
 			return nil, err
 		}
 
-		if daemon.pqService, err = postgres.New(daemon.ctx, daemon.pqServiceErrCh, &daemon.cfg.pqServiceCfg); err != nil {
+		if daemon.dbService, err = db.New(daemon.ctx, daemon.dbServiceErrCh, &daemon.cfg.dbServiceCfg); err != nil {
 			return nil, err
 		}
 	} // создаем сервис PostgreSQL
@@ -96,7 +96,7 @@ func New(ctx context.Context, cfg *Config) (*Daemon, error) {
 	{ // создаем сервис JSON
 		// daemon.cfg.jsonServiceCfg. =
 
-		if daemon.jsonService, err = json.New(daemon.ctx, daemon.jsonServiceErrCh, &daemon.cfg.jsonServiceCfg, daemon.pqService, daemon.pqService); err != nil {
+		if daemon.jsonService, err = json.New(daemon.ctx, daemon.jsonServiceErrCh, &daemon.cfg.jsonServiceCfg, daemon.dbService, daemon.dbService); err != nil {
 			return nil, err
 		}
 	} // создаем сервис JSON
@@ -190,7 +190,7 @@ func (d *Daemon) Shutdown() {
 	}
 
 	// Останавливаем PostgreSQL сервис
-	if myerr := d.pqService.Shutdown(); myerr != nil {
+	if myerr := d.dbService.Shutdown(); myerr != nil {
 		mylog.PrintfErrorInfo(myerr) // дополнительно логируем результат
 	}
 

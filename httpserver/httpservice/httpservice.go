@@ -148,6 +148,7 @@ func (s *Service) Shutdown() (myerr error) {
 	if s.cfg.UseBufPool && s.bytesPool != nil {
 		s.bytesPool.PrintBytesPoolStats()
 	}
+
 	return
 }
 

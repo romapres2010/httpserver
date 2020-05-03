@@ -10,6 +10,22 @@ import (
 	model "github.com/romapres2010/httpserver/model"
 )
 
+func deptMarshal(reqID uint64, v *model.Dept, buf []byte) ([]byte, error) {
+	mylog.PrintfDebugMsg("Marshal with EasyJSON: reqID", reqID)
+
+	w := jwriter.Writer{} // подготовим EasyJSON Writer
+	v.MarshalEasyJSON(&w) // сформируем JSON во внутренний буфер EasyJSON Writer
+
+	if w.Error != nil {
+		return nil, myerror.WithCause("6001", "Error Marshal: reqID", w.Error, reqID).PrintfInfo()
+	}
+
+	// Скопируем из внутреннего буфера EasyJSON Writer во внешний буфер
+	// Если размер внещнего буфера будет мал - то он использован не будет
+	mylog.PrintfDebugMsgDepth("SUCCESS: reqID", 1, reqID)
+	return w.Buffer.BuildBytes(buf), nil
+}
+
 // GetDept return a JSON for a given id
 func (s *Service) GetDept(ctx context.Context, id int, buf []byte) ([]byte, error) {
 	reqID := myctx.FromContextRequestID(ctx) // RequestID передается через context
@@ -27,16 +43,7 @@ func (s *Service) GetDept(ctx context.Context, id int, buf []byte) ([]byte, erro
 
 	// сформируем json
 	if exists {
-		mylog.PrintfDebugMsg("Marshal with EasyJSON: reqID", reqID)
-		w := jwriter.Writer{}    // подготовим EasyJSON Writer
-		vOut.MarshalEasyJSON(&w) // сформируем JSON во внутренний буфер EasyJSON Writer
-		if w.Error != nil {
-			return nil, myerror.WithCause("6001", "Error Marshal: reqID", w.Error, reqID).PrintfInfo()
-		}
-		// Скопируем из внутреннего буфера EasyJSON Writer во внешний буфер
-		// Если размер внещнего буфера будет мал - то он исопльзован не будет
-		mylog.PrintfDebugMsg("SUCCESS: reqID", reqID)
-		return w.Buffer.BuildBytes(buf), nil
+		return deptMarshal(reqID, vOut, buf)
 	}
 
 	mylog.PrintfDebugMsg("SUCCESS: reqID", reqID)
@@ -55,7 +62,6 @@ func (s *Service) CreateDept(ctx context.Context, inBuf []byte, buf []byte) ([]b
 	defer model.PutDept(vOut, true) // возвращаем в pool струкуру
 
 	// Парсим JSON в структуру
-	//err := json.Unmarshal(inBuf, vIn)
 	mylog.PrintfDebugMsg("Unmarshal with EasyJSON: reqID", reqID)
 	if err := vIn.UnmarshalJSON(inBuf); err != nil {
 		return nil, myerror.WithCause("6001", "Error Unmarshal: reqID, buf", err, reqID, string(inBuf)).PrintfInfo()
@@ -66,18 +72,7 @@ func (s *Service) CreateDept(ctx context.Context, inBuf []byte, buf []byte) ([]b
 		return nil, err
 	}
 
-	{ // сформируем json
-		mylog.PrintfDebugMsg("Marshal with EasyJSON: reqID", reqID)
-		w := jwriter.Writer{}    // подготовим EasyJSON Writer
-		vOut.MarshalEasyJSON(&w) // сформируем JSON во внутренний буфер EasyJSON Writer
-		if w.Error != nil {
-			return nil, myerror.WithCause("6001", "Error Marshal: reqID", w.Error, reqID).PrintfInfo()
-		}
-		// Скопируем из внутреннего буфера EasyJSON Writer во внешний буфер
-		// Если размер внещнего буфера будет мал - то он исопльзован не будет
-		mylog.PrintfDebugMsg("SUCCESS: reqID", reqID)
-		return w.Buffer.BuildBytes(buf), nil
-	} // сформируем json
+	return deptMarshal(reqID, vOut, buf)
 }
 
 // UpdateDept update dept and return a JSON
@@ -108,16 +103,5 @@ func (s *Service) UpdateDept(ctx context.Context, id int, inBuf []byte, buf []by
 		return nil, err
 	}
 
-	{ // сформируем json
-		mylog.PrintfDebugMsg("Marshal with EasyJSON: reqID", reqID)
-		w := jwriter.Writer{}    // подготовим EasyJSON Writer
-		vOut.MarshalEasyJSON(&w) // сформируем JSON во внутренний буфер EasyJSON Writer
-		if w.Error != nil {
-			return nil, myerror.WithCause("6001", "Error Marshal: reqID", w.Error, reqID).PrintfInfo()
-		}
-		// Скопируем из внутреннего буфера EasyJSON Writer во внешний буфер
-		// Если размер внещнего буфера будет мал - то он исопльзован не будет
-		mylog.PrintfDebugMsg("SUCCESS: reqID", reqID)
-		return w.Buffer.BuildBytes(buf), nil
-	} // сформируем json
+	return deptMarshal(reqID, vOut, buf)
 }
