@@ -1,0 +1,475 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<soapenv:Envelope xmlns:clas="http://ApplicationObjectLibrary/NSI/Classificator" xmlns:inf="http://xmlns.oracle.com/ApplicationObjectLibrary/Infrastructure" xmlns:log="http://ApplicationObjectLibrary/PDM/LogisticStructure" xmlns:log1="http://xmlns.oracle.com/EnterpriseObjects/Core/EBO/LogisticStructure" xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:v2="http://xmlns.oracle.com/EnterpriseObjects/Core/Common/V2">
+    <soapenv:Header/>
+    <soapenv:Body>
+        <log:PublishLogisticStructureRequestABM>
+            <log:Header>
+                <log:MessageID>B8bxEGwHoTjnrD</log:MessageID>
+                <log:VerbCode>PDM.20.Create</log:VerbCode>
+                <log:ListOfContacts>
+                    <inf:Contact>
+                        <inf:Name>Administrator</inf:Name>
+                        <inf:Email>Administrator</inf:Email>
+                        <inf:PhoneNumber>+78994545</inf:PhoneNumber>
+                    </inf:Contact>
+                </log:ListOfContacts>
+            </log:Header>
+            <log:Body>
+                <log:LogisticStructure>
+                    <log1:ListOfItem>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">CETx0NZSoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0679000</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>0</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Шпангоут 79</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>LRU</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Level 3</log1:RepairLevel>
+                            <log1:ReplaceLevel>Level 4</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">CsRx0NZSoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0679030</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">1nUx0RKCoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0000085</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">GsYx0RKCoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0000086</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">Wsbx0RKCoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0000087</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                            </log1:ListOfItemChilds>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">CsRx0NZSoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0679030</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>1</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Установка профилей для крепленя труб</log1:ObjectName>
+                            <log1:LCNCode>000-10-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-10-00</log1:SNKCode>
+                            <log1:ElementType>SRU</log1:ElementType>
+                            <log1:MaintenanceType>TAO</log1:MaintenanceType>
+                            <log1:RepairLevel>Level 3</log1:RepairLevel>
+                            <log1:ReplaceLevel>Level 4</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">SkXx0NZSoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0679031</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">iHRx0NZSoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0679032</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                            </log1:ListOfItemChilds>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">SkXx0NZSoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0679031</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>2</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Крепеж для труб 70.04.0679.030.000</log1:ObjectName>
+                            <log1:LCNCode>000-20-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-20-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">TIUx0N_moTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0679332</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">jYXx0N_moTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0679007</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                            </log1:ListOfItemChilds>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">TIUx0N_moTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0679332</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>3</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Профиль</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>SRU</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Level 1</log1:RepairLevel>
+                            <log1:ReplaceLevel>Level 3</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">jYXx0N_moTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0679007</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>3</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Крепеж по 70.04.0679.032.007</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">2xZx0RKCoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0000091</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">GaTx0RKCoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0000092</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">Giex0RKCoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0000093</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                            </log1:ListOfItemChilds>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">2xZx0RKCoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0000091</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>4</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Кронштейн</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">GaTx0RKCoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0000092</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>4</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Болт</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">Giex0RKCoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0000093</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>4</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Гайка</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">iHRx0NZSoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0679032</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>2</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Крепеж для 70.04.0679.031.000</log1:ObjectName>
+                            <log1:LCNCode>000-30-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-30-00</log1:SNKCode>
+                            <log1:ElementType>SRU</log1:ElementType>
+                            <log1:MaintenanceType>TAO</log1:MaintenanceType>
+                            <log1:RepairLevel>Level 3</log1:RepairLevel>
+                            <log1:ReplaceLevel>Level 4</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">SdXx0N$HoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0679400</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                            </log1:ListOfItemChilds>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">SdXx0N$HoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0679400</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>3</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Крепеж для 70.04.0679.031.000</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">mdfx0RKCoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0000089</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                                <log1:ItemChild>
+                                    <v2:Identification>
+                                        <v2:BusinessComponentID schemeAgencyID="PDM" schemeVersionID="PDM">2JUx0RKCoTjnrD</v2:BusinessComponentID>
+                                        <v2:ID>NEUP0000090</v2:ID>
+                                    </v2:Identification>
+                                </log1:ItemChild>
+                            </log1:ListOfItemChilds>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">mdfx0RKCoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0000089</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>4</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Болт</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">2JUx0RKCoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0000090</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>4</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>Гайка</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">1nUx0RKCoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0000085</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>1</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>70.04.0679.003.001</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">GsYx0RKCoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0000086</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>1</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>70.04.0679.003.002</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                        <log1:Item>
+                            <v2:Identification>
+                                <v2:BusinessComponentID schemeAgencyID="PDM">Wsbx0RKCoTjnrD</v2:BusinessComponentID>
+                                <v2:ID>NEUP0000087</v2:ID>
+                            </v2:Identification>
+                            <log1:Level>1</log1:Level>
+                            <log1:Revision>00</log1:Revision>
+                            <log1:ObjectName>70.04.0679.001.000</log1:ObjectName>
+                            <log1:LCNCode>000-00-00</log1:LCNCode>
+                            <log1:Quantity>1</log1:Quantity>
+                            <log1:SNKCode>000-00-00</log1:SNKCode>
+                            <log1:ElementType>Not specified</log1:ElementType>
+                            <log1:MaintenanceType>Not specified</log1:MaintenanceType>
+                            <log1:RepairLevel>Not specified</log1:RepairLevel>
+                            <log1:ReplaceLevel>Not specified</log1:ReplaceLevel>
+                            <log1:Zona/>
+                            <log1:AccessPanelId/>
+                            <log1:IsSpareYN>N</log1:IsSpareYN>
+                            <log1:IsMaintainabilityYN>N</log1:IsMaintainabilityYN>
+                            <log1:IsRotableYN>N</log1:IsRotableYN>
+                            <log1:IsConsumableYN>N</log1:IsConsumableYN>
+                            <log1:Description/>
+                            <log1:ListOfItemChilds/>
+                        </log1:Item>
+                    </log1:ListOfItem>
+                </log:LogisticStructure>
+            </log:Body>
+        </log:PublishLogisticStructureRequestABM>
+    </soapenv:Body>
+</soapenv:Envelope>

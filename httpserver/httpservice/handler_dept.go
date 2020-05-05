@@ -16,13 +16,13 @@ import (
 func (s *Service) GetDeptHandler(w http.ResponseWriter, r *http.Request) {
 	mylog.PrintfDebugMsg("START   ==================================================================================")
 
-	// Запускаем обработчик, возврат ошибки игнорируем
+	// Запускаем типовой process, возврат ошибки игнорируем
 	_ = s.process("GET", w, r, func(ctx context.Context, requestBuf []byte, buf []byte) ([]byte, Header, int, error) {
 		reqID := myctx.FromContextRequestID(ctx) // RequestID передается через context
 
 		mylog.PrintfDebugMsg("START: reqID", reqID)
 
-		// Считаем параметры и проверим на число
+		// Считаем PK из URL запроса и проверим на число
 		vars := mux.Vars(r)
 		idStr := vars["id"]
 		id, err := strconv.Atoi(idStr)
@@ -58,7 +58,7 @@ func (s *Service) GetDeptHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Service) CreateDeptHandler(w http.ResponseWriter, r *http.Request) {
 	mylog.PrintfDebugMsg("START   ==================================================================================")
 
-	// Запускаем обработчик, возврат ошибки игнорируем
+	// Запускаем типовой process, возврат ошибки игнорируем
 	_ = s.process("POST", w, r, func(ctx context.Context, requestBuf []byte, buf []byte) ([]byte, Header, int, error) {
 		reqID := myctx.FromContextRequestID(ctx) // RequestID передается через context
 
@@ -88,7 +88,7 @@ func (s *Service) CreateDeptHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Service) UpdateDeptHandler(w http.ResponseWriter, r *http.Request) {
 	mylog.PrintfDebugMsg("START   ==================================================================================")
 
-	// Запускаем обработчик, возврат ошибки игнорируем
+	// Запускаем типовой process, возврат ошибки игнорируем
 	_ = s.process("PUT", w, r, func(ctx context.Context, requestBuf []byte, buf []byte) ([]byte, Header, int, error) {
 		reqID := myctx.FromContextRequestID(ctx) // RequestID передается через context
 
