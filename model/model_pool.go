@@ -9,20 +9,28 @@ import (
 
 // represent a pool statistics for benchmarking
 var (
-	countGet uint64 // количество запросов кэша
-	countPut uint64 // количество возвратов в кэша
-	countNew uint64 // количество создания нового объекта
+	getDepts    uint64 // количество запросов кэша
+	getEmps     uint64 // количество запросов кэша
+	getEmpSlice uint64 // количество запросов кэша
+	putDepts    uint64 // количество возвратов в кэша
+	putEmps     uint64 // количество возвратов в кэша
+	putEmpSlice uint64 // количество возвратов в кэша
+	newDepts    uint64 // количество создания нового объекта
+	newEmps     uint64 // количество создания нового объекта
+	newEmpSlice uint64 // количество создания нового объекта
 )
 
 // PrintModelPoolStats print pool statistics
 func PrintModelPoolStats() {
-	mylog.PrintfInfoMsg("Usage model pool: countGet, countPut, countNew", countGet, countPut, countNew)
+	mylog.PrintfInfoMsg("Usage model Depts pool: Get, Put, New", getDepts, putDepts, newDepts)
+	mylog.PrintfInfoMsg("Usage model Emps  pool: Get, Put, New", getEmps, putEmps, newEmps)
+	mylog.PrintfInfoMsg("Usage model EmpSlice pool: Get, Put, New", getEmpSlice, putEmpSlice, newEmpSlice)
 }
 
 // deptsPool represent depts pooling
 var deptsPool = sync.Pool{
 	New: func() interface{} {
-		atomic.AddUint64(&countNew, 1)
+		atomic.AddUint64(&newDepts, 1)
 		return new(Dept)
 	},
 }
@@ -30,7 +38,7 @@ var deptsPool = sync.Pool{
 // empsPool represent emps pooling
 var empsPool = sync.Pool{
 	New: func() interface{} {
-		atomic.AddUint64(&countNew, 1)
+		atomic.AddUint64(&newEmps, 1)
 		return new(Emp)
 	},
 }
@@ -39,7 +47,7 @@ var empsPool = sync.Pool{
 var empSlicePool = sync.Pool{
 	New: func() interface{} {
 		v := make([]*Emp, 0)
-		atomic.AddUint64(&countNew, 1)
+		atomic.AddUint64(&newEmpSlice, 1)
 		return EmpSlice(v)
 	},
 }
@@ -79,7 +87,7 @@ func (p *Emp) Reset() {
 func GetDept() *Dept {
 	p := deptsPool.Get().(*Dept)
 	p.Reset()
-	atomic.AddUint64(&countGet, 1)
+	atomic.AddUint64(&getDepts, 1)
 	return p
 }
 
@@ -89,7 +97,7 @@ func PutDept(p *Dept, isCascad bool) {
 		PutEmpSlice(p.Emps, isCascad)
 		p.Emps = nil
 		deptsPool.Put(p)
-		atomic.AddUint64(&countPut, 1)
+		atomic.AddUint64(&putDepts, 1)
 	}
 }
 
@@ -97,7 +105,7 @@ func PutDept(p *Dept, isCascad bool) {
 func GetEmp() *Emp {
 	p := empsPool.Get().(*Emp)
 	p.Reset()
-	atomic.AddUint64(&countGet, 1)
+	atomic.AddUint64(&getEmps, 1)
 	return p
 }
 
@@ -105,7 +113,7 @@ func GetEmp() *Emp {
 func PutEmp(p *Emp) {
 	if p != nil {
 		empsPool.Put(p)
-		atomic.AddUint64(&countPut, 1)
+		atomic.AddUint64(&putEmps, 1)
 	}
 }
 
@@ -113,7 +121,7 @@ func PutEmp(p *Emp) {
 func GetEmpSlice() EmpSlice {
 	p := empSlicePool.Get().(EmpSlice)
 	p.Reset()
-	atomic.AddUint64(&countGet, 1)
+	atomic.AddUint64(&getEmpSlice, 1)
 	return p
 }
 
@@ -131,12 +139,12 @@ func PutEmpSlice(p EmpSlice, isCascad bool) {
 	if p != nil {
 		for i := range p {
 			if isCascad {
-				// PutEmp(p[i])
+				PutEmp(p[i])
 			}
 			p[i] = nil // что бы не осталось подвисших ссылок
 		}
 		p = p[:0] // сброс указателя среза
 		empSlicePool.Put(p)
-		atomic.AddUint64(&countPut, 1)
+		atomic.AddUint64(&putEmpSlice, 1)
 	}
 }

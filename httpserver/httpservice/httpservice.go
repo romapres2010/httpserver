@@ -274,15 +274,13 @@ func (s *Service) process(method string, w http.ResponseWriter, r *http.Request,
 
 	// Если переданного буфера не хватило, то мог быть создан новый буфер. Вернем его в pool
 	if responseBuf != nil && buf != nil && s.cfg.UseBufPool && s.bytesPool != nil {
+		// Если новый буфер подходит по размерам для хранения в pool
+		if cap(responseBuf) >= s.cfg.BufPooledSize && cap(responseBuf) <= s.cfg.BufPooledMaxSize {
+			defer s.bytesPool.PutBuf(responseBuf)
+		}
+
 		if reflect.ValueOf(buf).Pointer() != reflect.ValueOf(responseBuf).Pointer() {
-			mylog.PrintfDebugMsg("Response []byte buffer not equal to that got from pool: poolBufSize, responseBufSize", cap(buf), cap(responseBuf))
-			// Если новый буфер подходит по размерам для хранения в pool
-			if cap(responseBuf) >= s.cfg.BufPooledSize && cap(responseBuf) <= s.cfg.BufPooledMaxSize {
-				defer s.bytesPool.PutBuf(responseBuf)
-			}
-		} else {
-			// Если ранее выделенный пул не был использован, то не сохраняем его
-			defer s.bytesPool.PutBuf(buf)
+			mylog.PrintfInfoMsg("[]byte buffer: poolBufSize, responseBufSize", cap(buf), cap(responseBuf))
 		}
 	}
 

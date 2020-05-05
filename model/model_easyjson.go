@@ -4,6 +4,7 @@ package model
 
 import (
 	json "encoding/json"
+
 	easyjson "github.com/mailru/easyjson"
 	jlexer "github.com/mailru/easyjson/jlexer"
 	jwriter "github.com/mailru/easyjson/jwriter"
@@ -181,7 +182,8 @@ func easyjsonC80ae7adDecodeGithubComRomapres2010HttpserverModel1(in *jlexer.Lexe
 				in.Delim('[')
 				if out.Emps == nil {
 					if !in.IsDelim(']') {
-						out.Emps = make([]*Emp, 0, 8)
+						out.Emps = []*Emp(GetEmpSlice()) // Извлечем из pool срез для вложенных объектов
+						// out.Emps = make([]*Emp, 0, 8)
 					} else {
 						out.Emps = []*Emp{}
 					}
@@ -195,7 +197,8 @@ func easyjsonC80ae7adDecodeGithubComRomapres2010HttpserverModel1(in *jlexer.Lexe
 						v1 = nil
 					} else {
 						if v1 == nil {
-							v1 = new(Emp)
+							// v1 = new(Emp)
+							v1 = GetEmp() // Извлечем из pool структуру
 						}
 						(*v1).UnmarshalEasyJSON(in)
 					}

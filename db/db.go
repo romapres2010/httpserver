@@ -5,7 +5,7 @@ import (
 
 	myerror "github.com/romapres2010/httpserver/error"
 	mylog "github.com/romapres2010/httpserver/log"
-	sql "github.com/romapres2010/httpserver/sqlxx"
+	mysql "github.com/romapres2010/httpserver/sqlxx"
 )
 
 // Service represent DB service
@@ -16,15 +16,15 @@ type Service struct {
 	errCh  chan<- error       // канал ошибок
 	stopCh chan struct{}      // канал подтверждения об успешном закрытии сервиса
 
-	db      *sql.DB     // БД
-	SQLStms sql.SQLStms // SQL команды
+	db      *mysql.DB     // БД
+	SQLStms mysql.SQLStms // SQL команды
 
 	// вложенные сервисы
 }
 
 // Config конфигурационные настройки
 type Config struct {
-	SQLCfg sql.Config
+	SQLCfg mysql.Config
 }
 
 // New create DB service
@@ -53,27 +53,26 @@ func New(ctx context.Context, errCh chan<- error, cfg *Config) (*Service, error)
 		service.ctx, service.cancel = context.WithCancel(ctx)
 	}
 
-	// Создадим подключение к БД
-	if service.db, err = sql.Connect(&cfg.SQLCfg); err != nil {
-		return nil, err
-	}
-
 	// Наполним список SQL команд
-	service.SQLStms = map[string]*sql.SQLStm{
-		"GetDept":         &sql.SQLStm{"SELECT deptno, dname, loc FROM dept WHERE deptno = $1", nil, true},
-		"GetDepts":        &sql.SQLStm{"SELECT deptno, dname, loc FROM dept", nil, true},
-		"GetDeptsPK":      &sql.SQLStm{"SELECT deptno FROM dept", nil, true},
-		"CreateDept":      &sql.SQLStm{"INSERT INTO dept (deptno, dname, loc) VALUES (:deptno, :dname, :loc)", nil, false},
-		"UpdateDept":      &sql.SQLStm{"UPDATE dept SET dname = :dname, loc = :loc WHERE deptno = :deptno", nil, false},
-		"GetEmp":          &sql.SQLStm{"SELECT empno, ename, job, mgr, hiredate, sal, comm, deptno FROM emp WHERE empno = $1", nil, true},
-		"GetEmpsByDept":   &sql.SQLStm{"SELECT empno, ename, job, mgr, hiredate, sal, comm, deptno FROM emp WHERE deptno = $1", nil, true},
-		"GetEmpsPKByDept": &sql.SQLStm{"SELECT empno FROM emp WHERE deptno = $1", nil, true},
-		"CreateEmp":       &sql.SQLStm{"INSERT INTO emp (empno, ename, job, mgr, hiredate, sal, comm, deptno) VALUES (:empno, :ename, :job, :mgr, :hiredate, :sal, :comm, :deptno)", nil, false},
-		"UpdateEmp":       &sql.SQLStm{"UPDATE emp SET empno = :empno, ename = :ename, job = :job, mgr = :mgr, hiredate = :hiredate, sal = :sal, comm = :comm, deptno = :deptno WHERE empno = :empno", nil, false},
+	sqlStms := map[string]*mysql.SQLStm{
+		"GetDept":         &mysql.SQLStm{"SELECT deptno, dname, loc FROM dept WHERE deptno = $1", nil, true},
+		"GetDeptUK":       &mysql.SQLStm{"SELECT deptno, dname, loc FROM dept WHERE deptno = $1", nil, true},
+		"DeptExists":      &mysql.SQLStm{"SELECT 1 FROM dept WHERE deptno = $1", nil, true},
+		"GetDepts":        &mysql.SQLStm{"SELECT deptno, dname, loc FROM dept", nil, true},
+		"GetDeptsPK":      &mysql.SQLStm{"SELECT deptno FROM dept", nil, true},
+		"CreateDept":      &mysql.SQLStm{"INSERT INTO dept (deptno, dname, loc) VALUES (:deptno, :dname, :loc)", nil, false},
+		"UpdateDept":      &mysql.SQLStm{"UPDATE dept SET dname = :dname, loc = :loc WHERE deptno = :deptno", nil, false},
+		"EmpExists":       &mysql.SQLStm{"SELECT 1 FROM emp WHERE empno = $1", nil, true},
+		"GetEmp":          &mysql.SQLStm{"SELECT empno, ename, job, mgr, hiredate, sal, comm, deptno FROM emp WHERE empno = $1", nil, true},
+		"GetEmpUK":        &mysql.SQLStm{"SELECT empno, ename, job, mgr, hiredate, sal, comm, deptno FROM emp WHERE empno = $1", nil, true},
+		"GetEmpsByDept":   &mysql.SQLStm{"SELECT empno, ename, job, mgr, hiredate, sal, comm, deptno FROM emp WHERE deptno = $1", nil, true},
+		"GetEmpsPKByDept": &mysql.SQLStm{"SELECT empno FROM emp WHERE deptno = $1", nil, true},
+		"CreateEmp":       &mysql.SQLStm{"INSERT INTO emp (empno, ename, job, mgr, hiredate, sal, comm, deptno) VALUES (:empno, :ename, :job, :mgr, :hiredate, :sal, :comm, :deptno)", nil, false},
+		"UpdateEmp":       &mysql.SQLStm{"UPDATE emp SET empno = :empno, ename = :ename, job = :job, mgr = :mgr, hiredate = :hiredate, sal = :sal, comm = :comm, deptno = :deptno WHERE empno = :empno", nil, false},
 	}
 
-	// Подготовим SQL команды
-	if err = sql.Preparex(service.db, service.SQLStms); err != nil {
+	// Создадим подключение к БД
+	if service.db, err = mysql.New(&cfg.SQLCfg, sqlStms); err != nil {
 		return nil, err
 	}
 

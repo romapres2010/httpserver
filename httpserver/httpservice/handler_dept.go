@@ -65,7 +65,7 @@ func (s *Service) CreateDeptHandler(w http.ResponseWriter, r *http.Request) {
 		mylog.PrintfDebugMsg("START: reqID", reqID)
 
 		// вызываем JSON сервис
-		responseBuf, err := s.jsonService.CreateDept(ctx, requestBuf, buf)
+		id, responseBuf, err := s.jsonService.CreateDept(ctx, requestBuf, buf)
 		if err != nil {
 			return nil, nil, http.StatusInternalServerError, err
 		}
@@ -74,6 +74,7 @@ func (s *Service) CreateDeptHandler(w http.ResponseWriter, r *http.Request) {
 		header := Header{}
 		header["Content-Type"] = "application/json; charset=utf-8"
 		header["Errcode"] = "0"
+		header["Id"] = fmt.Sprintf("%v", id)
 		header["RequestID"] = fmt.Sprintf("%v", reqID)
 
 		mylog.PrintfDebugMsg("SUCCESS: reqID", reqID)
@@ -105,6 +106,11 @@ func (s *Service) UpdateDeptHandler(w http.ResponseWriter, r *http.Request) {
 		responseBuf, err := s.jsonService.UpdateDept(ctx, id, requestBuf, buf)
 		if err != nil {
 			return nil, nil, http.StatusInternalServerError, err
+		}
+
+		// Если данные не найдены
+		if responseBuf == nil {
+			return nil, nil, http.StatusNotFound, nil
 		}
 
 		// формируем ответ

@@ -196,12 +196,13 @@ func BenchmarkPgDb_CreateDept(b *testing.B) {
 			b.StopTimer()
 
 			var depnoPK model.DeptPK
+			var deptOut model.Dept
 			var empnoPK model.EmpPK
 			var deptNew = dept
 			deptNew.Emps = make([]*model.Emp, 10)
 
 			// считываем последовательность для dept PK
-			err := tests.p.db.Get(&depnoPK, "select nextval('dept_deptno_seq') deptno")
+			err := tests.p.db.DB.Get(&depnoPK, "select nextval('dept_deptno_seq') deptno")
 			if err != nil {
 				b.Errorf("\n PgDb.CreateDept() - error tests.p.Db.Get(&depnoPK, select nextval('dept_deptno_seq')) %v", fmt.Sprintf("%+v", err))
 				return
@@ -218,7 +219,7 @@ func BenchmarkPgDb_CreateDept(b *testing.B) {
 				e.Deptno.Int64 = int64(depnoPK.Deptno)
 				e.Deptno.Valid = true
 				// считываем последовательность для emp PK
-				err := tests.p.db.Get(&empnoPK, "select nextval('dept_deptno_seq') empno")
+				err := tests.p.db.DB.Get(&empnoPK, "select nextval('dept_deptno_seq') empno")
 				if err != nil {
 					b.Errorf("\n PgDb.CreateDept() - error tests.p.Db.Get(&depnoPK, select nextval('dept_deptno_seq')) %v", fmt.Sprintf("%+v", err))
 					return
@@ -230,7 +231,7 @@ func BenchmarkPgDb_CreateDept(b *testing.B) {
 
 			b.StartTimer()
 
-			err = tests.p.CreateDept(ctx, &deptNew, nil)
+			err = tests.p.CreateDept(ctx, &deptNew, &deptOut)
 			if err != nil {
 				b.Errorf("\n PgDb.CreateDept() - error tests.p.CreateDept(&deptNew), param: %v/n %v", deptNew, fmt.Sprintf("%+v", err))
 				return
